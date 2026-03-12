@@ -68,6 +68,8 @@
     "disconnected": "Disconnected",
     "hint": "Enter to send · Shift+Enter for new line",
     "uploadAttachment": "Upload Attachment",
+    "showToolMessages": "Show tool call details",
+    "hideToolMessages": "Hide tool call details",
     "uploading": "Uploading...",
     "uploadFailed": "Upload failed"
   },
@@ -80,7 +82,12 @@
     "configured": "Configured",
     "notConfigured": "Not Configured",
     "save": "Save",
-    "saved": "Saved"
+    "saved": "Saved",
+    "models": "Model List",
+    "modelsEmpty": "No models added. Add models to enable quick selection when switching providers.",
+    "modelsPlaceholder": "Enter model name, e.g. gpt-4o",
+    "modelsAdd": "Add",
+    "modelsRequired": "Please add at least one model name"
   },
   "channels": {
     "title": "Channels",
@@ -256,6 +263,7 @@
   "settings": {
     "title": "Agent Settings",
     "model": "Model",
+    "selectModel": "Select model",
     "provider": "Provider",
     "selectProvider": "Select provider",
     "maxTokens": "Max Tokens",

@@ -136,49 +136,61 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Bottom: single user row matching nav item height */}
+      {/* Bottom: user row + inline theme toggle */}
       <div
         className="shrink-0 px-2 pb-3"
         style={{ borderTop: "1px solid hsl(var(--sidebar-section-label) / 0.12)" }}
       >
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className={cn(
-              "mt-1 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-              "text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover-bg))]"
-            )}>
-              <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-                {user?.username?.[0]?.toUpperCase() ?? "?"}
-              </div>
-              <span className="flex-1 truncate text-left">{user?.username}</span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="right" align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
-              {resolvedTheme === "dark"
-                ? <><Sun className="mr-2 h-4 w-4" />{t("common.lightMode")}</>
-                : <><Moon className="mr-2 h-4 w-4" />{t("common.darkMode")}</>}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {
-              const currentLang = i18n.language;
-              const nextLang = currentLang === "zh" ? "en" : currentLang === "en" ? "ja" : "zh";
-              i18n.changeLanguage(nextLang);
-            }}>
-              <Languages className="mr-2 h-4 w-4" />
-              {i18n.language === "zh" ? "English" : i18n.language === "en" ? "日本語" : "中文"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setShowChangePwd(true)}>
-              <KeyRound className="mr-2 h-4 w-4" />
-              {t("auth.changePassword")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={clearAuth} className="text-destructive focus:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
-              {t("auth.logout")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="mt-1 flex items-center gap-1">
+          {/* User dropdown (avatar + name) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className={cn(
+                "flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
+                "text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover-bg))]"
+              )}>
+                <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {user?.username?.[0]?.toUpperCase() ?? "?"}
+                </div>
+                <span className="flex-1 truncate text-left">{user?.username}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="end" className="w-48">
+              <DropdownMenuItem onClick={() => {
+                const currentLang = i18n.language;
+                const nextLang = currentLang === "zh" ? "en" : currentLang === "en" ? "ja" : "zh";
+                i18n.changeLanguage(nextLang);
+              }}>
+                <Languages className="mr-2 h-4 w-4" />
+                {i18n.language === "zh" ? "English" : i18n.language === "en" ? "日本語" : "中文"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setShowChangePwd(true)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                {t("auth.changePassword")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={clearAuth} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                {t("auth.logout")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Inline theme toggle */}
+          <button
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            title={resolvedTheme === "dark" ? t("common.lightMode") : t("common.darkMode")}
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors",
+              "text-[hsl(var(--sidebar-muted))] hover:bg-[hsl(var(--sidebar-hover-bg))] hover:text-[hsl(var(--sidebar-fg))]"
+            )}
+          >
+            {resolvedTheme === "dark"
+              ? <Sun className="h-3.5 w-3.5" />
+              : <Moon className="h-3.5 w-3.5" />}
+          </button>
+        </div>
       </div>
 
       <ChangePasswordDialog open={showChangePwd} onClose={() => setShowChangePwd(false)} />

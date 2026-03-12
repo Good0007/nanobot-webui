@@ -15,11 +15,17 @@ export function ChatWindow() {
     messages,
     isWaiting,
     progressText,
+    showToolMessages,
     addMessage,
     setWaiting,
     setProgress,
     setCurrentSession,
+    toggleToolMessages,
   } = useChatStore();
+
+  const visibleMessages = showToolMessages
+    ? messages
+    : messages.filter((m) => m.role !== "tool");
 
   const wsRef = useRef<ChatWebSocket | null>(null);
   const assistantMsgIdRef = useRef<string | null>(null);
@@ -76,8 +82,13 @@ export function ChatWindow() {
             timestamp: new Date().toISOString(),
           });
         }
-        // Refresh the sessions list so newly-created sessions appear in the sidebar.
+        // Refresh sessions list and current session's messages (so tool call/result
+        // messages that were saved server-side appear without requiring a page reload).
         qc.invalidateQueries({ queryKey: ["sessions"] });
+        const sessKey = useChatStore.getState().currentSessionKey;
+        if (sessKey) {
+          qc.invalidateQueries({ queryKey: ["sessions", sessKey, "messages"] });
+        }
       } else if (msg.type === "error") {
         setProgress("");
         setWaiting(false);
@@ -135,7 +146,7 @@ export function ChatWindow() {
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.map((msg) => (
+            {visibleMessages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
           </div>
@@ -163,6 +174,8 @@ export function ChatWindow() {
         onStop={handleStop}
         isWaiting={isWaiting}
         isConnected={isConnected}
+        showToolMessages={showToolMessages}
+        onToggleToolMessages={toggleToolMessages}
       />
     </div>
   );

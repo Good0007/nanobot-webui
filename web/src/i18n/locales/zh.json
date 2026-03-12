@@ -68,6 +68,8 @@
     "disconnected": "未连接",
     "hint": "Enter 发送 · Shift+Enter 换行",
     "uploadAttachment": "上传附件",
+    "showToolMessages": "显示工具调用过程",
+    "hideToolMessages": "隐藏工具调用过程",
     "uploading": "上传中...",
     "uploadFailed": "上传失败"
   },
@@ -80,7 +82,12 @@
     "configured": "已配置",
     "notConfigured": "未配置",
     "save": "保存",
-    "saved": "保存成功"
+    "saved": "保存成功",
+    "models": "可用模型列表",
+    "modelsEmpty": "暂无模型，添加后切换提供商时可直接选择",
+    "modelsPlaceholder": "输入模型名称，如 gpt-4o",
+    "modelsAdd": "添加",
+    "modelsRequired": "请至少添加一个模型名称"
   },
   "channels": {
     "title": "通道",
@@ -160,14 +167,6 @@
     "mustComplete": "请完成配置后再继续",
     "agentConfigRequired": "请选择提供商和填写模型名称",
     "setupComplete": "配置完成！欢迎使用 Nanobot"
-  },
-  "providers": {
-    "configured": "已配置",
-    "notConfigured": "未配置",
-    "apiKey": "API Key",
-    "apiKeyPlaceholder": "请输入 API Key",
-    "apiKeyRequired": "请输入 API Key",
-    "apiBase": "API Base URL"
   },
   "mcp": {
     "title": "MCP 服务器",
@@ -258,6 +257,7 @@
   "settings": {
     "title": "Agent 设置",
     "model": "模型",
+    "selectModel": "请选择模型",
     "provider": "提供商",
     "selectProvider": "请选择提供商",
     "maxTokens": "最大 Token 数",

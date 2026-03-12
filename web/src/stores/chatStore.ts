@@ -23,6 +23,7 @@ interface ChatState {
   messages: ChatMessage[];
   isWaiting: boolean;
   progressText: string;
+  showToolMessages: boolean;
   setCurrentSession: (key: string | null) => void;
   addMessage: (msg: ChatMessage) => void;
   appendAssistantText: (id: string, text: string) => void;
@@ -31,6 +32,7 @@ interface ChatState {
   setWaiting: (v: boolean) => void;
   clearMessages: () => void;
   setMessages: (msgs: ChatMessage[]) => void;
+  toggleToolMessages: () => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -40,6 +42,7 @@ export const useChatStore = create<ChatState>()(
       messages: [],
       isWaiting: false,
       progressText: "",
+      showToolMessages: false,
 
       setCurrentSession: (key) =>
         set((state) => ({
@@ -72,12 +75,16 @@ export const useChatStore = create<ChatState>()(
       clearMessages: () => set({ messages: [], progressText: "" }),
 
       setMessages: (messages) => set({ messages }),
+
+      toggleToolMessages: () =>
+        set((state) => ({ showToolMessages: !state.showToolMessages })),
     }),
     {
       name: "nanobot-chat",
       partialize: (state) => ({
         currentSessionKey: state.currentSessionKey,
         messages: state.messages,
+        showToolMessages: state.showToolMessages,
       }),
     }
   )

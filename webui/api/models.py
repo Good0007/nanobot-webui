@@ -140,12 +140,18 @@ class ProviderInfo(BaseModel):
     api_base: str | None
     extra_headers: dict[str, str] | None = None
     has_key: bool
+    # [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+    models: list[str] = Field(default_factory=list)  # User-defined model list
+    # [AI:END]
 
 
 class UpdateProviderRequest(BaseModel):
     api_key: str | None = None  # empty string clears the key
     api_base: str | None = None
     extra_headers: dict[str, str] | None = None
+    # [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+    models: list[str] | None = None  # None = no change, [] = clear list
+    # [AI:END]
 
 
 # ---------------------------------------------------------------------------

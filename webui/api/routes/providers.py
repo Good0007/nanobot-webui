@@ -9,6 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from webui.api.deps import get_services, require_admin
 from webui.api.gateway import ServiceContainer
 from webui.api.models import ProviderInfo, UpdateProviderRequest
+# [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+from webui.api import provider_meta
+# [AI:END]
 
 router = APIRouter()
 
@@ -44,6 +47,7 @@ async def list_providers(
                 api_base=p.api_base,
                 extra_headers=p.extra_headers,
                 has_key=bool(p.api_key),
+                models=provider_meta.get_provider_models(name),
             )
         )
     return result
@@ -68,6 +72,10 @@ async def update_provider(
         p.api_base = body.api_base or None
     if "extra_headers" in body.model_fields_set:
         p.extra_headers = body.extra_headers or None
+    # [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+    if body.models is not None:
+        provider_meta.set_provider_models(name, body.models)
+    # [AI:END]
 
     save_config(svc.config)
     svc.reload_provider()
@@ -77,4 +85,5 @@ async def update_provider(
         api_base=p.api_base,
         extra_headers=p.extra_headers,
         has_key=bool(p.api_key),
+        models=provider_meta.get_provider_models(name),
     )

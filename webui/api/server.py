@@ -37,6 +37,7 @@ def create_app(container: ServiceContainer | None = None) -> FastAPI:
         config,
         cron,
         mcp,
+        openai_proxy,
         providers,
         sessions,
         skills,
@@ -54,6 +55,7 @@ def create_app(container: ServiceContainer | None = None) -> FastAPI:
     app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
     app.include_router(users.router, prefix="/api/users", tags=["users"])
     app.include_router(ws.router, tags=["ws"])
+    app.include_router(openai_proxy.router)
 
     # Serve built React frontend (optional — only when `bun run build` has been run)
     # Resolution order:

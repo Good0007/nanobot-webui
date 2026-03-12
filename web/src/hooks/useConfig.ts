@@ -7,7 +7,7 @@ export interface AgentSettings {
   provider: string;
   max_tokens: number;
   temperature: number;
-  max_tool_iterations: number;
+  max_iterations: number;
   memory_window: number;
   reasoning_effort: string;
   workspace: string;

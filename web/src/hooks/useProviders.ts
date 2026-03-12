@@ -8,6 +8,9 @@ export interface ProviderInfo {
   api_base: string | null;
   extra_headers: Record<string, string> | null;
   has_key: boolean;
+  // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+  models: string[];
+  // [AI:END]
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -70,12 +73,18 @@ export function useUpdateProvider() {
       api_key,
       api_base,
       extra_headers,
+      // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+      models,
+      // [AI:END]
     }: {
       name: string;
       api_key?: string;
       api_base?: string;
       extra_headers?: Record<string, string>;
-    }) => api.patch(`/providers/${name}`, { api_key, api_base, extra_headers }).then((r) => r.data),
+      // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+      models?: string[];
+      // [AI:END]
+    }) => api.patch(`/providers/${name}`, { api_key, api_base, extra_headers, models }).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["providers"] });
       toast.success("Saved");

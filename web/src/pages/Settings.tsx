@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -41,11 +41,81 @@ const PROVIDER_ICONS: Record<string, string> = {
 
 type ProviderDraft = Partial<{ api_key: string; api_base: string; extra_headers: string }>;
 
+// [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+function ModelListEditor({
+  models,
+  onChange,
+}: {
+  models: string[];
+  onChange: (models: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const [newModel, setNewModel] = useState("");
+
+  const handleAdd = () => {
+    const trimmed = newModel.trim();
+    if (trimmed && !models.includes(trimmed)) {
+      onChange([...models, trimmed]);
+      setNewModel("");
+    }
+  };
+
+  const handleRemove = (model: string) => {
+    onChange(models.filter((m) => m !== model));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs">{t("providers.models")} ({t("common.optional")})</Label>
+      <div
+        className="flex flex-wrap items-center gap-1.5 min-h-[36px] p-2 rounded-md border bg-background cursor-text"
+        onClick={(e) => {
+          const input = (e.currentTarget as HTMLElement).querySelector("input");
+          input?.focus();
+        }}
+      >
+        {models.map((m) => (
+          <span
+            key={m}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted text-xs font-mono"
+          >
+            {m}
+            <button
+              type="button"
+              onClick={() => handleRemove(m)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={newModel}
+          onChange={(e) => setNewModel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
+            if (e.key === "Backspace" && !newModel && models.length > 0) {
+              onChange(models.slice(0, -1));
+            }
+          }}
+          onBlur={handleAdd}
+          placeholder={models.length === 0 ? t("providers.modelsPlaceholder") : ""}
+          className="flex-1 min-w-[120px] bg-transparent text-xs font-mono outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+    </div>
+  );
+}
+// [AI:END]
+
 function ProvidersTab() {
   const { t } = useTranslation();
   const { data: providers, isLoading } = useProviders();
   const update = useUpdateProvider();
   const [drafts, setDrafts] = useState<Record<string, ProviderDraft>>({});
+  // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+  const [modelsDrafts, setModelsDrafts] = useState<Record<string, string[] | undefined>>({});
+  // [AI:END]
   const [expanded, setExpanded] = useState<string[]>([]);
 
   const toggleExpand = (name: string) =>
@@ -57,6 +127,14 @@ function ProvidersTab() {
   const setDraft = (name: string, field: keyof ProviderDraft, value: string) =>
     setDrafts((p) => ({ ...p, [name]: { ...p[name], [field]: value } }));
 
+  // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+  const getModelsDraft = (name: string, original: string[]) =>
+    modelsDrafts[name] ?? original;
+
+  const setModelsDraft = (name: string, models: string[]) =>
+    setModelsDrafts((p) => ({ ...p, [name]: models }));
+  // [AI:END]
+
   const handleSave = (prov: ProviderInfo) => {
     const d = drafts[prov.name] ?? {};
     const apiKey = d.api_key ?? prov.api_key_masked;
@@ -66,11 +144,19 @@ function ProvidersTab() {
     if (headersStr !== undefined && headersStr.trim()) {
       try { extra_headers = JSON.parse(headersStr); } catch { /* invalid JSON, skip */ }
     }
+    // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+    const models = modelsDrafts[prov.name] !== undefined
+      ? modelsDrafts[prov.name]
+      : prov.models;
+    // [AI:END]
     update.mutate({
       name: prov.name,
       api_key: isMasked(apiKey) ? undefined : apiKey || undefined,
       api_base: apiBase || undefined,
       extra_headers,
+      // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+      models,
+      // [AI:END]
     });
   };
 
@@ -84,6 +170,9 @@ function ProvidersTab() {
         const apiBase = getDraft(p.name, "api_base", p.api_base ?? "");
         const extraHeaders = getDraft(p.name, "extra_headers",
           p.extra_headers ? JSON.stringify(p.extra_headers, null, 2) : "");
+        // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+        const models = getModelsDraft(p.name, p.models ?? []);
+        // [AI:END]
         const icon = PROVIDER_ICONS[p.name] ?? "🤖";
         return (
           <Card key={p.name} className={p.has_key ? "" : "opacity-70"}>
@@ -124,6 +213,14 @@ function ProvidersTab() {
                       className="font-mono text-xs h-20 resize-none"
                     />
                   </div>
+                  {/* [AI:START] tool=copilot date=2026-03-12 author=chenweikang */}
+                  <div className="sm:col-span-2">
+                    <ModelListEditor
+                      models={models}
+                      onChange={(m) => setModelsDraft(p.name, m)}
+                    />
+                  </div>
+                  {/* [AI:END] */}
                 </div>
                 <Button size="sm" onClick={() => handleSave(p)}
                   disabled={update.isPending}>
@@ -165,12 +262,17 @@ function AgentTab() {
   const [workspace, setWorkspace] = useState("");
   const [agentInited, setAgentInited] = useState(false);
 
+  // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+  // 获取当前选中提供商的模型列表（必须在 useState 之后）
+  const selectedProviderModels = providers?.find(p => p.name === provider)?.models ?? [];
+  // [AI:END]
+
   if (agent && !agentInited) {
     setModel(agent.model ?? "");
     setProvider(agent.provider ?? "");
     setMaxTokens(String(agent.max_tokens ?? ""));
     setTemperature(String(agent.temperature ?? ""));
-    setMaxToolIter(String(agent.max_tool_iterations ?? ""));
+    setMaxToolIter(String(agent.max_iterations ?? ""));
     setMemoryWindow(String(agent.memory_window ?? ""));
     setReasoningEffort(agent.reasoning_effort || "__default__");
     setWorkspace(agent.workspace ?? "");
@@ -183,7 +285,7 @@ function AgentTab() {
       provider: provider || undefined,
       max_tokens: maxTokens ? Number(maxTokens) : undefined,
       temperature: temperature ? Number(temperature) : undefined,
-      max_tool_iterations: maxToolIter ? Number(maxToolIter) : undefined,
+      max_iterations: maxToolIter ? Number(maxToolIter) : undefined,
       memory_window: memoryWindow ? Number(memoryWindow) : undefined,
       reasoning_effort: reasoningEffort && reasoningEffort !== "__default__" ? reasoningEffort : undefined,
       workspace: workspace || undefined,
@@ -227,15 +329,39 @@ function AgentTab() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label>{t("settings.provider")}</Label>
-                  <Select value={provider} onValueChange={setProvider}>
+                  <Select value={provider} onValueChange={(v) => {
+                    setProvider(v);
+                    // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
+                    // 切换提供商时，如果新提供商有模型列表，自动选择第一个
+                    const provModels = providers?.find(p => p.name === v)?.models ?? [];
+                    if (provModels.length > 0) {
+                      setModel(provModels[0]);
+                    }
+                    // [AI:END]
+                  }}>
                     <SelectTrigger><SelectValue placeholder={t("settings.provider")} /></SelectTrigger>
                     <SelectContent>{availableProviders.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {/* [AI:START] tool=copilot date=2026-03-12 author=chenweikang */}
                 <div className="space-y-1">
                   <Label>{t("settings.model")}</Label>
-                  <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. claude-opus-4-5" />
+                  {selectedProviderModels.length > 0 ? (
+                    <Select value={model} onValueChange={setModel}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("settings.selectModel")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedProviderModels.map((m) => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. claude-opus-4-5" />
+                  )}
                 </div>
+                {/* [AI:END] */}
                 <div className="space-y-1">
                   <Label>{t("settings.maxTokens")}</Label>
                   <Input type="number" value={maxTokens} onChange={(e) => setMaxTokens(e.target.value)} />

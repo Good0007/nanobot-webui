@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Send, Square, Wifi, WifiOff, Paperclip, X, Loader2, ImageIcon, FileText } from "lucide-react";
+import { Send, Square, Wifi, WifiOff, Paperclip, X, Loader2, ImageIcon, FileText, Terminal } from "lucide-react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -21,6 +21,8 @@ interface ChatInputProps {
   onStop?: () => void;
   isWaiting?: boolean;
   isConnected?: boolean;
+  showToolMessages?: boolean;
+  onToggleToolMessages?: () => void;
 }
 
 export function ChatInput({
@@ -29,6 +31,8 @@ export function ChatInput({
   onStop,
   isWaiting,
   isConnected = true,
+  showToolMessages = false,
+  onToggleToolMessages,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
@@ -177,6 +181,20 @@ export function ChatInput({
                 title={t("chat.uploadAttachment")}
               >
                 <Paperclip className="h-3.5 w-3.5" />
+              </Button>
+              {/* Toggle tool messages */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-6 w-6 transition-colors ${
+                  showToolMessages
+                    ? "text-primary"
+                    : "text-muted-foreground/40 hover:text-muted-foreground"
+                }`}
+                onClick={onToggleToolMessages}
+                title={showToolMessages ? t("chat.hideToolMessages") : t("chat.showToolMessages")}
+              >
+                <Terminal className="h-3.5 w-3.5" />
               </Button>
               <input
                 ref={fileInputRef}

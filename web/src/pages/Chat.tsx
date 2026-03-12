@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ChatWindow } from "../components/chat/ChatWindow";
-import { useChatStore } from "../stores/chatStore";
+import { useChatStore, type ChatMessage } from "../stores/chatStore";
 import { useSessions, useSessionMessages } from "../hooks/useSessions";
 import { useAuthStore } from "../stores/authStore";
 import { useDeleteSession } from "../hooks/useSessions";
@@ -25,34 +25,61 @@ export default function Chat() {
   const { data: sessions } = useSessions();
   const { data: sessionMsgs, isSuccess: historyLoaded } = useSessionMessages(currentSessionKey ?? "");
   const deleteSession = useDeleteSession();
-  const historyLoadedForRef = useRef<string | null>(null);
+  const loadedKeyRef = useRef<string | null>(null);
+  const loadedCountRef = useRef<number>(0);
+  // Track the exact message objects written to the store by the last setMessages call.
+  // Used to identify which store messages were added locally (e.g. error bubbles)
+  // vs. loaded from server, without relying on timestamps (which have timezone mismatches).
+  const lastSetMsgsRef = useRef<ChatMessage[]>([]);
 
-  // Populate store with historical messages whenever the active session changes
+  // Reset local-tracking when the user switches sessions.
   useEffect(() => {
-    if (
-      currentSessionKey &&
-      historyLoaded &&
-      historyLoadedForRef.current !== currentSessionKey
-    ) {
-      historyLoadedForRef.current = currentSessionKey;
-      // Filter out empty messages only (assistant stubs with null/empty content).
-      // tool and system messages are included but rendered differently.
-      const msgs = (sessionMsgs ?? [])
-        .filter((m) =>
-          typeof m.content === "string" &&
-          m.content.trim().length > 0
-        )
-        .map((m) => ({
-          id: nanoid(),
-          role: m.role as "user" | "assistant" | "tool" | "system",
-          content: m.content as string,
-          timestamp: m.timestamp ?? new Date().toISOString(),
-          name: m.name ?? undefined,
-        }));
-      // Only overwrite if we got actual history (avoids wiping persisted messages on new empty sessions)
-      if (msgs.length > 0) {
-        setMessages(msgs);
-      }
+    lastSetMsgsRef.current = [];
+  }, [currentSessionKey]);
+
+  // Populate store with historical messages whenever the active session changes,
+  // or when the server returns more messages after a tool call completes.
+  useEffect(() => {
+    if (!currentSessionKey || !historyLoaded) return;
+    const serverCount = (sessionMsgs ?? []).length;
+    // Run on: session switch OR server has more messages than last known count
+    if (loadedKeyRef.current === currentSessionKey && serverCount <= loadedCountRef.current) return;
+    loadedKeyRef.current = currentSessionKey;
+    loadedCountRef.current = serverCount;
+    // Filter out empty messages only (assistant stubs with null/empty content).
+    // tool and system messages are included but rendered differently.
+    const msgs = (sessionMsgs ?? [])
+      .filter((m) =>
+        typeof m.content === "string" &&
+        m.content.trim().length > 0 &&
+        // Hide redundant "Message sent to ..." tool result — reply is shown as assistant bubble
+        !(m.role === "tool" && m.name === "message")
+      )
+      .map((m) => ({
+        id: nanoid(),
+        role: m.role as "user" | "assistant" | "tool" | "system",
+        content: m.content as string,
+        timestamp: m.timestamp ?? new Date().toISOString(),
+        name: m.name ?? undefined,
+      }));
+    // Only overwrite if we got actual history (avoids wiping persisted messages on new empty sessions)
+    if (msgs.length > 0) {
+      // Preserve locally-added messages not present in server data.
+      // LLM errors are intentionally NOT saved to session by nanobot, so they must
+      // be kept from the store rather than reloaded. We identify them by two criteria:
+      //   1. Their ID was not part of the previous setMessages call (i.e. added via addMessage)
+      //   2. Their text content is not already covered by the new server data (no duplicates)
+      // NOTE: timestamp comparison is intentionally avoided — Python datetime.now() uses local
+      // time (no Z) while JS new Date().toISOString() uses UTC (with Z), making string
+      // comparison unreliable across timezones.
+      const prevIds = new Set(lastSetMsgsRef.current.map((m) => m.id));
+      const serverContents = new Set(msgs.map((m) => m.content));
+      const localToPreserve = useChatStore.getState().messages.filter(
+        (m) => !prevIds.has(m.id) && m.role !== "user" && !serverContents.has(m.content)
+      );
+      const merged = localToPreserve.length > 0 ? [...msgs, ...localToPreserve] : msgs;
+      lastSetMsgsRef.current = merged;
+      setMessages(merged);
     }
   }, [currentSessionKey, historyLoaded, sessionMsgs, setMessages]);
 
@@ -97,7 +124,8 @@ export default function Chat() {
       b.toString(16).padStart(2, "0")
     ).join("");
     const key = `web:${user?.id}:${hexId}`;
-    historyLoadedForRef.current = key; // new session has no history
+    loadedKeyRef.current = key; // mark as loaded with 0 messages so effect skips empty session
+    loadedCountRef.current = 0;
     setCurrentSession(key);
   };
 

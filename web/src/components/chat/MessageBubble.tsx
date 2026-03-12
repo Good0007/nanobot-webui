@@ -7,7 +7,7 @@ import type { ChatMessage } from "../../stores/chatStore";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { useAuthStore } from "../../stores/authStore";
-import { Terminal, Info, ChevronDown, ChevronRight } from "lucide-react";
+import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle } from "lucide-react";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -31,32 +31,48 @@ function splitThinking(content: string): { type: "text" | "thinking"; content: s
   return parts;
 }
 
-/** Tool execution result block — amber tinted, collapsible when content is long */
+/** Tool execution result block — clean slate style, collapsible */
 function ToolResultBlock({ message }: { message: ChatMessage }) {
-  const isLong = message.content.length > 200;
+  const isError = message.content.startsWith("Error:");
+  const isLong = message.content.length > 300;
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-md border border-amber-200/70 bg-amber-50/50 dark:border-amber-800/40 dark:bg-amber-950/15 text-xs">
+    <div className={cn(
+      "rounded-lg border text-xs overflow-hidden",
+      isError
+        ? "border-red-200/70 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/15"
+        : "border-border/60 bg-muted/30 dark:bg-muted/20"
+    )}>
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-amber-100/50 dark:hover:bg-amber-900/20 rounded-md transition-colors"
+        onClick={() => isLong && setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center gap-2 px-3 py-1.5 text-left rounded-lg transition-colors",
+          isLong && "hover:bg-muted/50 cursor-pointer",
+          !isLong && "cursor-default"
+        )}
       >
-        <Terminal className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
-        <span className="font-mono font-medium text-amber-700 dark:text-amber-400 truncate">
-          {message.name || "tool result"}
+        {isError
+          ? <XCircle className="h-3 w-3 shrink-0 text-red-500" />
+          : <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />}
+        <span className="font-mono font-medium text-foreground/70 truncate">
+          {message.name || "tool"}
         </span>
-        <span className="ml-auto mr-1 shrink-0 text-[10px] text-muted-foreground/50">
+        <span className="ml-auto mr-1 shrink-0 text-[10px] text-muted-foreground/40">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
-        {isLong &&
-          (open
-            ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/60" />
-            : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60" />)}
+        {isLong && (
+          open
+            ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+        )}
       </button>
       {(open || !isLong) && (
-        <div className="border-t border-amber-200/50 dark:border-amber-800/30 px-3 py-2">
-          <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-amber-900/80 dark:text-amber-200/70">
+        <div className="border-t border-border/40 px-3 py-2">
+          <pre className={cn(
+            "max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed",
+            isError ? "text-red-700/80 dark:text-red-300/70" : "text-muted-foreground/80"
+          )}>
             {message.content}
           </pre>
         </div>
@@ -100,6 +116,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   // Don't render anything for empty/whitespace messages
   if (!message.content?.trim() && !message.toolCalls?.length && !message.isStreaming) {
+    return null;
+  }
+
+  // Hide redundant message() tool result — the reply is already shown as an assistant bubble
+  if (message.role === "tool" && message.name === "message") {
     return null;
   }
 
