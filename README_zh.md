@@ -232,10 +232,11 @@ Model: gpt-4o
 # 1. 克隆仓库并以可编辑模式安装后端
 git clone https://github.com/Good0007/nanobot-webui.git
 cd nanobot-webui
-pip install -e .
+uv venv               # 创建虚拟环境——不要修改中央 Python 安装。
+uv pip install -e .
 
 # 2. 启动后端
-nanobot webui                        # API + 静态文件服务于 :8080
+uv run webui                        # API + 静态文件服务于 :8080
 
 # 3. 启动前端开发服务器（另开终端）
 cd web

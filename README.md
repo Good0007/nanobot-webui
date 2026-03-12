@@ -228,16 +228,17 @@ Model: gpt-4o
 
 ## Development
 
-**Prerequisites:** Python ≥ 3.11, [Bun](https://bun.sh) ≥ 1.0
+**Prerequisites:** Python ≥ 3.11, [Bun](https://bun.sh) ≥ 1.0, [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```bash
 # 1. Clone and install backend in editable mode
 git clone https://github.com/Good0007/nanobot-webui.git
 cd nanobot-webui
-pip install -e .
+uv venv               # create a virtual env - don't mess with central python install
+uv pip install -e .
 
 # 2. Start the backend
-nanobot webui                        # API + static on :8080
+uv run webui                        # API + static on :8080
 
 # 3. Start the frontend dev server (separate terminal)
 cd web
@@ -251,7 +252,7 @@ To produce a production build:
 cd web
 bun run build          # outputs to web/dist/, setup.py copies it to webui/web/dist/
 cd ..
-nanobot webui          # backend now serves webui/web/dist/ as static files
+uv run nanobot webui          # backend now serves webui/web/dist/ as static files
 ```
 
 ---

@@ -16,6 +16,8 @@ build
 *.venv
 .DS_Store
 nanobot
+uv.lock
+web/tsconfig.tsbuildinfo
 
 # PyPI 配置（包含敏感信息）
 .pypirc
