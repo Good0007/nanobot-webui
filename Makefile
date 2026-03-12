@@ -60,9 +60,6 @@ ifndef VERSION
 	@exit 1
 endif
 	@echo "Releasing version $(VERSION)..."
-	@git tag -a v$(VERSION) -m "Release v$(VERSION)" || (echo "Tag v$(VERSION) already exists or git error" && exit 1)
-	@git push origin v$(VERSION)
-	@echo "Git tag v$(VERSION) created and pushed"
 	docker buildx build \
 		--platform $(PLATFORMS) \
 		--tag $(IMAGE):$(VERSION) \
