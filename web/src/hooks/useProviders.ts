@@ -31,8 +31,28 @@ const PROVIDER_LABELS: Record<string, string> = {
   github_copilot: "GitHub Copilot",
 };
 
+const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
+  anthropic: "https://api.anthropic.com",
+  openai: "https://api.openai.com/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  deepseek: "https://api.deepseek.com",
+  groq: "https://api.groq.com/openai/v1",
+  zhipu: "https://open.bigmodel.cn/api/paas/v4",
+  dashscope: "https://dashscope.aliyuncs.com/api/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta",
+  moonshot: "https://api.moonshot.cn/v1",
+  minimax: "https://api.minimax.chat/v1",
+  siliconflow: "https://api.siliconflow.cn/v1",
+  volcengine: "https://ark.cn-beijing.volces.com/api/v3",
+  azure_openai: "https://<your-resource-name>.openai.azure.com",
+};
+
 export function getProviderLabel(name: string): string {
   return PROVIDER_LABELS[name] ?? name;
+}
+
+export function getProviderDefaultBaseUrl(name: string): string {
+  return PROVIDER_DEFAULT_BASE_URLS[name] ?? "";
 }
 
 export function useProviders() {

@@ -41,9 +41,9 @@ const GENERAL_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
+  { path: "/settings", label: "nav.settings", icon: Settings },
   { path: "/channels", label: "nav.channels", icon: Radio },
   { path: "/tools", label: "nav.tools", icon: Puzzle },
-  { path: "/settings", label: "nav.settings", icon: Settings },
   { path: "/users", label: "nav.users", icon: Users },
   { path: "/cron", label: "nav.cron", icon: Clock },
   { path: "/system-config", label: "nav.systemConfig", icon: FileJson },
@@ -159,9 +159,13 @@ export function Sidebar() {
                 ? <><Sun className="mr-2 h-4 w-4" />{t("common.lightMode")}</>
                 : <><Moon className="mr-2 h-4 w-4" />{t("common.darkMode")}</>}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => i18n.changeLanguage(i18n.language === "zh" ? "en" : "zh")}>
+            <DropdownMenuItem onClick={() => {
+              const currentLang = i18n.language;
+              const nextLang = currentLang === "zh" ? "en" : currentLang === "en" ? "ja" : "zh";
+              i18n.changeLanguage(nextLang);
+            }}>
               <Languages className="mr-2 h-4 w-4" />
-              {i18n.language === "zh" ? "English" : "中文"}
+              {i18n.language === "zh" ? "English" : i18n.language === "en" ? "日本語" : "中文"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowChangePwd(true)}>

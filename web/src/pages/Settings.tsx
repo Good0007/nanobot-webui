@@ -17,7 +17,13 @@ import {
 } from "../components/ui/select";
 import { SecretInput } from "../components/shared/SecretInput";
 import { isMasked } from "../lib/utils";
-import { useProviders, useUpdateProvider, getProviderLabel, type ProviderInfo } from "../hooks/useProviders";
+import {
+  useProviders,
+  useUpdateProvider,
+  getProviderLabel,
+  getProviderDefaultBaseUrl,
+  type ProviderInfo
+} from "../hooks/useProviders";
 import {
   useAgentSettings, useUpdateAgentSettings,
   useGatewayConfig, useUpdateGatewayConfig,
@@ -107,7 +113,7 @@ function ProvidersTab() {
                   <div className="space-y-1">
                     <Label className="text-xs">{t("providers.apiBase")} ({t("common.optional")})</Label>
                     <Input value={apiBase} onChange={(e) => setDraft(p.name, "api_base", e.target.value)}
-                      placeholder="https://api.openai.com/v1" className="text-sm" />
+                      placeholder={getProviderDefaultBaseUrl(p.name) || "https://api.example.com/v1"} className="text-sm" />
                   </div>
                   <div className="space-y-1 sm:col-span-2">
                     <Label className="text-xs">{t("providers.extraHeaders")} ({t("common.optional")})</Label>
@@ -134,19 +140,20 @@ function ProvidersTab() {
 
 // ── Agent tab ─────────────────────────────────────────────────────────────────
 
-const PROVIDERS_LIST = [
-  "auto", "anthropic", "openai", "openrouter", "deepseek", "volcengine",
-  "groq", "zhipu", "dashscope", "vllm", "gemini", "moonshot", "minimax",
-  "aihubmix", "siliconflow", "azure_openai", "custom",
-];
 const REASONING_EFFORT_OPTIONS = ["__default__", "none", "low", "medium", "high"];
 
 function AgentTab() {
   const { t } = useTranslation();
   const { data: agent, isLoading: loadingAgent } = useAgentSettings();
   const { data: gateway, isLoading: loadingGateway } = useGatewayConfig();
+  const { data: providers } = useProviders();
   const updateAgent = useUpdateAgentSettings();
   const updateGateway = useUpdateGatewayConfig();
+
+  // 获取已配置的提供商列表（包含 auto 和所有 has_key 为 true 的提供商）
+  const availableProviders = providers 
+    ? ["auto", ...providers.filter(p => p.has_key).map(p => p.name)]
+    : ["auto"];
 
   const [model, setModel] = useState("");
   const [provider, setProvider] = useState("");
@@ -222,7 +229,7 @@ function AgentTab() {
                   <Label>{t("settings.provider")}</Label>
                   <Select value={provider} onValueChange={setProvider}>
                     <SelectTrigger><SelectValue placeholder={t("settings.provider")} /></SelectTrigger>
-                    <SelectContent>{PROVIDERS_LIST.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                    <SelectContent>{availableProviders.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1">
