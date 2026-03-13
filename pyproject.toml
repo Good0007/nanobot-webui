@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nanobot-webui"
-version = "0.1.3"
+version = "0.1.4"
 description = "Web management panel for nanobot"
 readme = "README.md"
 license = { text = "MIT" }
