@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Annotated
@@ -21,23 +20,6 @@ from webui.api.models import (
 router = APIRouter()
 
 _BUILTIN_SKILLS_DIR = Path(__file__).parent.parent.parent.parent / "nanobot" / "skills"
-_DISABLED_SKILLS_FILE = ".disabled_skills.json"
-
-
-def _load_disabled(workspace: Path) -> set[str]:
-    p = workspace / _DISABLED_SKILLS_FILE
-    if not p.exists():
-        return set()
-    try:
-        return set(json.loads(p.read_text(encoding="utf-8")))
-    except Exception:
-        return set()
-
-
-def _save_disabled(workspace: Path, disabled: set[str]) -> None:
-    p = workspace / _DISABLED_SKILLS_FILE
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(sorted(disabled), ensure_ascii=False), encoding="utf-8")
 
 
 def _skill_available(name: str, path: str) -> tuple[bool, str | None]:
@@ -63,10 +45,11 @@ async def list_skills(
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> list[SkillInfo]:
     from nanobot.agent.skills import SkillsLoader
+    from webui.utils.webui_config import get_disabled_skills
 
     loader = SkillsLoader(svc.config.workspace_path)
     all_skills = loader.list_skills(filter_unavailable=False)
-    disabled = _load_disabled(svc.config.workspace_path)
+    disabled = get_disabled_skills()
     result = []
     for s in all_skills:
         available, reason = _skill_available(s["name"], s["path"])
@@ -157,16 +140,16 @@ async def toggle_skill(
     _admin: Annotated[dict, Depends(require_admin)],
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> dict:
-    """Enable or disable a skill (persisted in workspace)."""
+    """Enable or disable a skill (persisted in webui_config)."""
+    from webui.utils.webui_config import get_disabled_skills, set_disabled_skills
 
     enabled: bool = bool(body.get("enabled", True))
-    workspace = svc.config.workspace_path
-    disabled = _load_disabled(workspace)
+    disabled = get_disabled_skills()
 
     if enabled:
         disabled.discard(name)
     else:
         disabled.add(name)
 
-    _save_disabled(workspace, disabled)
+    set_disabled_skills(disabled)
     return {"name": name, "enabled": enabled}

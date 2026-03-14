@@ -1,0 +1,109 @@
+"""[MCPDynamic] patch — per-server AsyncExitStack for dynamic MCP load/unload.
+
+Replaces the single shared _mcp_stack with a per-server dict so individual
+servers can be connected/disconnected without tearing down the entire agent.
+
+New method added to AgentLoop:
+    async toggle_mcp_server(name, cfg, enabled) -> None
+"""
+
+from __future__ import annotations
+
+
+def apply() -> None:
+    from contextlib import AsyncExitStack
+
+    from nanobot.agent.loop import AgentLoop
+    from nanobot.agent.tools.mcp import connect_mcp_servers
+
+    _orig_init = AgentLoop.__init__
+    _orig_close = AgentLoop.close_mcp
+
+    # ------------------------------------------------------------------
+    # __init__: add _mcp_server_stacks tracking dict
+    # ------------------------------------------------------------------
+    def _init_patched(self, *args, **kwargs):
+        _orig_init(self, *args, **kwargs)
+        self._mcp_server_stacks: dict[str, AsyncExitStack] = {}
+
+    # ------------------------------------------------------------------
+    # _connect_mcp: connect each enabled server into its own stack
+    # ------------------------------------------------------------------
+    async def _connect_mcp_patched(self) -> None:
+        from webui.utils.webui_config import is_mcp_server_enabled
+
+        if self._mcp_connected or self._mcp_connecting or not self._mcp_servers:
+            return
+        self._mcp_connecting = True
+        try:
+            for name, cfg in self._mcp_servers.items():
+                if not is_mcp_server_enabled(name):
+                    continue
+                if name in self._mcp_server_stacks:
+                    continue  # already connected
+                stack = AsyncExitStack()
+                await stack.__aenter__()
+                try:
+                    await connect_mcp_servers({name: cfg}, self.tools, stack)
+                    self._mcp_server_stacks[name] = stack
+                except Exception:
+                    try:
+                        await stack.aclose()
+                    except Exception:
+                        pass
+            self._mcp_connected = True
+        finally:
+            self._mcp_connecting = False
+
+    # ------------------------------------------------------------------
+    # close_mcp: close all per-server stacks
+    # ------------------------------------------------------------------
+    async def _close_mcp_patched(self) -> None:
+        for stack in list(self._mcp_server_stacks.values()):
+            try:
+                await stack.aclose()
+            except (RuntimeError, BaseExceptionGroup):
+                pass
+        self._mcp_server_stacks.clear()
+        self._mcp_connected = False
+        self._mcp_stack = None  # keep legacy attribute in sync
+
+    # ------------------------------------------------------------------
+    # toggle_mcp_server: load or unload a single server at runtime
+    # ------------------------------------------------------------------
+    async def _toggle_mcp_server(self, name: str, cfg, enabled: bool) -> None:
+        """Load or unload a single MCP server's tools without touching others."""
+        prefix = f"mcp_{name}_"
+
+        if not enabled:
+            # Unregister all tools for this server from the registry
+            to_remove = [k for k in self.tools._tools if k.startswith(prefix)]
+            for k in to_remove:
+                self.tools.unregister(k)
+            # Close and discard the server's stack
+            stack = self._mcp_server_stacks.pop(name, None)
+            if stack:
+                try:
+                    await stack.aclose()
+                except (RuntimeError, BaseExceptionGroup):
+                    pass
+        else:
+            # Don't double-connect
+            if name in self._mcp_server_stacks:
+                return
+            stack = AsyncExitStack()
+            await stack.__aenter__()
+            try:
+                await connect_mcp_servers({name: cfg}, self.tools, stack)
+                self._mcp_server_stacks[name] = stack
+            except Exception:
+                try:
+                    await stack.aclose()
+                except Exception:
+                    pass
+                raise
+
+    AgentLoop.__init__ = _init_patched  # type: ignore[method-assign]
+    AgentLoop._connect_mcp = _connect_mcp_patched  # type: ignore[method-assign]
+    AgentLoop.close_mcp = _close_mcp_patched  # type: ignore[method-assign]
+    AgentLoop.toggle_mcp_server = _toggle_mcp_server  # type: ignore[attr-defined]

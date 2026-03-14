@@ -300,30 +300,14 @@ async def put_raw_config(
 # S3 / OSS Storage config
 # ---------------------------------------------------------------------------
 
-def _s3_config_path() -> Path:
-    from nanobot.config.loader import get_config_path
-    return get_config_path().parent / "s3_config.json"
-
-
 def _load_s3() -> dict:
-    p = _s3_config_path()
-    if p.exists():
-        return json.loads(p.read_text(encoding="utf-8"))
-    return {
-        "enabled": False,
-        "endpoint_url": "",
-        "access_key_id": "",
-        "secret_access_key": "",
-        "bucket": "",
-        "region": "",
-        "public_base_url": "",
-    }
+    from webui.utils.webui_config import get_s3
+    return get_s3()
 
 
 def _save_s3(cfg: dict) -> None:
-    p = _s3_config_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    from webui.utils.webui_config import set_s3
+    set_s3(cfg)
 
 
 @router.get("/s3", response_model=S3ConfigResponse)

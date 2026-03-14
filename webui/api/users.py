@@ -1,24 +1,25 @@
-"""User store backed by ~/.nanobot/webui_users.json."""
+"""User store backed by ~/.nanobot/webui_config.json (users section)."""
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from webui.api.auth import hash_password
+from webui.utils.webui_config import get_users, save_users
 
-_USERS_PATH = Path.home() / ".nanobot" / "webui_users.json"
+# Kept for any code that may still reference it directly
+_USERS_PATH = Path.home() / ".nanobot" / "webui_config.json"
 
 
 class UserStore:
     """Thread-safe (asyncio single-thread) persistent user store."""
 
     def __init__(self, path: Path | None = None):
-        self._path = path or _USERS_PATH
-        self._path.parent.mkdir(parents=True, exist_ok=True)
+        # path arg is ignored — storage is handled by webui_config
+        Path.home().joinpath(".nanobot").mkdir(parents=True, exist_ok=True)
         self._ensure_default_admin()
 
     # ------------------------------------------------------------------
@@ -26,18 +27,10 @@ class UserStore:
     # ------------------------------------------------------------------
 
     def _load(self) -> list[dict[str, Any]]:
-        if self._path.exists():
-            try:
-                return json.loads(self._path.read_text(encoding="utf-8")).get("users", [])
-            except Exception:
-                return []
-        return []
+        return get_users()
 
     def _save(self, users: list[dict[str, Any]]) -> None:
-        self._path.write_text(
-            json.dumps({"users": users}, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        save_users(users)
 
     def _ensure_default_admin(self) -> None:
         users = self._load()
