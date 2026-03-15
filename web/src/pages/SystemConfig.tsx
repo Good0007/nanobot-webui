@@ -4,13 +4,14 @@ import { toast } from "sonner";
 import { Download, Upload, FileJson, RefreshCw, Save, CheckCircle2, AlertCircle, Database } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Textarea } from "../components/ui/textarea";
+
 import { Badge } from "../components/ui/badge";
 import { Skeleton } from "../components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
+import { DiffEditor } from "../components/ui/diff-editor";
 import { useRawConfig, useSaveRawConfig, exportWorkspace, useImportWorkspace, useS3Config, useSaveS3Config, type S3Config } from "../hooks/useConfig";
 
 // ── JSON validation helper ─────────────────────────────────────────────────
@@ -32,12 +33,14 @@ function RawConfigEditor() {
   const save = useSaveRawConfig();
 
   const [content, setContent] = useState<string | null>(null);
+  const [originalContent, setOriginalContent] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   // Initialize content when data loads
   if (data && content === null) {
     setContent(data.content);
+    setOriginalContent(data.content);
     setDirty(false);
   }
 
@@ -64,6 +67,7 @@ function RawConfigEditor() {
     if (!content || jsonError) return;
     save.mutate(content, {
       onSuccess: () => {
+        setOriginalContent(content);
         setDirty(false);
         refetch();
       },
@@ -73,6 +77,7 @@ function RawConfigEditor() {
   const handleDiscard = () => {
     if (data) {
       setContent(data.content);
+      setOriginalContent(data.content);
       setDirty(false);
       setJsonError(null);
     }
@@ -108,7 +113,7 @@ function RawConfigEditor() {
               {t("sysconfig.jsonError")}
             </span>
           )}
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => { setContent(null); setDirty(false); setJsonError(null); refetch(); }}>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => { setContent(null); setOriginalContent(null); setDirty(false); setJsonError(null); refetch(); }}>
             <RefreshCw className="h-3.5 w-3.5" />
             {t("common.refresh")}
           </Button>
@@ -134,9 +139,10 @@ function RawConfigEditor() {
 
       {/* Editor */}
       <div className="relative">
-        <Textarea
+        <DiffEditor
+          original={originalContent ?? ""}
           value={content ?? ""}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={handleChange}
           className={`font-mono text-xs min-h-[520px] resize-y leading-relaxed ${
             jsonError ? "border-destructive focus-visible:ring-destructive" : ""
           }`}
