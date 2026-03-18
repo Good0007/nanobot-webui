@@ -280,7 +280,7 @@ function AgentTab() {
     setMaxTokens(String(agent.max_tokens ?? ""));
     setTemperature(String(agent.temperature ?? ""));
     setMaxToolIter(String(agent.max_iterations ?? ""));
-    setMemoryWindow(String(agent.memory_window ?? ""));
+    setMemoryWindow(String(agent.context_window_tokens ?? ""));
     setReasoningEffort(agent.reasoning_effort || "__default__");
     setWorkspace(agent.workspace ?? "");
     setSendProgress(agent.send_progress ?? true);
@@ -295,7 +295,7 @@ function AgentTab() {
       max_tokens: maxTokens ? Number(maxTokens) : undefined,
       temperature: temperature ? Number(temperature) : undefined,
       max_iterations: maxToolIter ? Number(maxToolIter) : undefined,
-      memory_window: memoryWindow ? Number(memoryWindow) : undefined,
+      context_window_tokens: memoryWindow ? Number(memoryWindow) : undefined,
       reasoning_effort: reasoningEffort && reasoningEffort !== "__default__" ? reasoningEffort : undefined,
       workspace: workspace || undefined,
       send_progress: sendProgress,
@@ -386,7 +386,7 @@ function AgentTab() {
                   <Input type="number" value={maxToolIter} onChange={(e) => setMaxToolIter(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>{t("settings.memoryWindow")}</Label>
+                  <Label>{t("settings.contextWindowTokens")}</Label>
                   <Input type="number" value={memoryWindow} onChange={(e) => setMemoryWindow(e.target.value)} />
                 </div>
                 <div className="space-y-1">

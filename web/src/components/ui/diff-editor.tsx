@@ -9,9 +9,18 @@ interface DiffEditorProps {
   spellCheck?: boolean;
 }
 
+const GUTTER_W = 48; // px — line-number column width
+const PAD = 10;       // px — editor content padding
+const LINE_H = 18;    // px — font 12px × line-height 1.5
+
 function DiffEditor({ original, value, onChange, className = "", spellCheck = false }: DiffEditorProps) {
-  const [lines, setLines] = useState<{ content: string; type: 'added' | 'modified' | 'unchanged' }[]>([]);
+  const [lineDiffs, setLineDiffs] = useState<{ content: string; type: 'added' | 'modified' | 'unchanged' }[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineNumRef  = useRef<HTMLDivElement>(null);
+  const overlayRef  = useRef<HTMLDivElement>(null);
+
+  const lineCount = value ? value.split('\n').length : 1;
+  const hasError  = className.includes('border-destructive');
 
   // 计算差异
   useEffect(() => {
@@ -21,98 +30,121 @@ function DiffEditor({ original, value, onChange, className = "", spellCheck = fa
 
     diffResult.forEach(part => {
       const partLines = part.value.split('\n');
-      // 移除最后一个空行（因为split('\n')会在末尾添加一个空字符串）
       if (partLines.length > 0 && partLines[partLines.length - 1] === '') {
         partLines.pop();
       }
-
       if (part.removed) {
-        // 保存删除的行，用于检测修改
         removedLines = partLines;
       } else if (part.added) {
-        // 检查是否是修改（删除后立即添加）
         if (removedLines.length > 0) {
-          // 标记为修改的行
-          partLines.forEach(line => {
-            result.push({ content: line, type: 'modified' });
-          });
-          removedLines = []; // 清空已处理的删除行
+          partLines.forEach(line => result.push({ content: line, type: 'modified' }));
+          removedLines = [];
         } else {
-          // 标记为新增的行
-          partLines.forEach(line => {
-            result.push({ content: line, type: 'added' });
-          });
+          partLines.forEach(line => result.push({ content: line, type: 'added' }));
         }
       } else {
-        // 未修改的行
-        partLines.forEach(line => {
-          result.push({ content: line, type: 'unchanged' });
-        });
-        removedLines = []; // 清空删除行，因为遇到了未修改的行
+        partLines.forEach(line => result.push({ content: line, type: 'unchanged' }));
+        removedLines = [];
       }
     });
 
-    setLines(result);
+    setLineDiffs(result);
   }, [original, value]);
 
-  // 同步滚动
+  // 同步滚动：textarea → 行号列 + 差异覆盖层
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+    const ta = textareaRef.current;
+    if (!ta) return;
 
     const syncScroll = () => {
-      const overlay = document.getElementById('diff-overlay');
-      if (overlay) {
-        overlay.scrollTop = textarea.scrollTop;
-        overlay.scrollLeft = textarea.scrollLeft;
+      if (overlayRef.current) {
+        overlayRef.current.scrollTop  = ta.scrollTop;
+        overlayRef.current.scrollLeft = ta.scrollLeft;
+      }
+      if (lineNumRef.current) {
+        lineNumRef.current.scrollTop = ta.scrollTop;
       }
     };
 
-    textarea.addEventListener('scroll', syncScroll);
-    return () => textarea.removeEventListener('scroll', syncScroll);
+    ta.addEventListener('scroll', syncScroll);
+    return () => ta.removeEventListener('scroll', syncScroll);
   }, []);
 
   return (
-    <div className="relative font-mono text-xs">
-      {/* 差异高亮覆盖层 */}
-      <div 
-        id="diff-overlay"
-        className="absolute inset-0 pointer-events-none overflow-auto"
+    <div
+      className={`flex rounded-md border font-mono text-xs ${hasError ? 'border-destructive' : 'border-input'}`}
+      style={{ minHeight: 520, resize: 'vertical', overflow: 'hidden' }}
+    >
+      {/* 行号列 */}
+      <div
+        ref={lineNumRef}
+        className="select-none flex-shrink-0 bg-muted/40 border-r border-border text-muted-foreground"
         style={{
-          padding: '10px',
-          whiteSpace: 'pre-wrap',
-          lineHeight: '1.5',
-          fontFamily: 'monospace',
-          fontSize: '12px',
-          color: 'transparent', // 隐藏覆盖层的文本
+          width: GUTTER_W,
+          paddingTop: PAD,
+          paddingRight: 8,
+          paddingBottom: PAD,
+          fontSize: 12,
+          lineHeight: 1.5,
+          textAlign: 'right',
+          overflowY: 'hidden',
+          overflowX: 'hidden',
         }}
       >
-        {lines.map((line, index) => (
-          <div 
-            key={index}
-            className={`min-h-[18px] ${line.type === 'added' ? 'bg-green-100' : line.type === 'modified' ? 'bg-red-100' : ''}`}
-          >
-            {line.content}
-          </div>
+        {Array.from({ length: lineCount }, (_, i) => (
+          <div key={i} style={{ height: LINE_H }}>{i + 1}</div>
         ))}
       </div>
 
-      {/* 实际的文本编辑器 */}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full min-h-[520px] resize-y leading-relaxed ${className}`}
-        spellCheck={spellCheck}
-        style={{
-          backgroundColor: 'transparent',
-          caretColor: 'currentColor',
-          position: 'relative',
-          zIndex: 1,
-          lineHeight: '1.5',
-          padding: '10px',
-        }}
-      />
+      {/* 编辑区域 */}
+      <div className="relative flex-1 overflow-hidden">
+        {/* 差异高亮覆盖层 */}
+        <div
+          ref={overlayRef}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            overflow: 'hidden',
+            padding: PAD,
+            whiteSpace: 'pre-wrap',
+            lineHeight: 1.5,
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: 'transparent',
+          }}
+        >
+          {lineDiffs.map((line, i) => (
+            <div
+              key={i}
+              className={
+                line.type === 'added'    ? 'bg-green-100 dark:bg-green-900/30' :
+                line.type === 'modified' ? 'bg-red-100 dark:bg-red-900/30'     : ''
+              }
+              style={{ minHeight: LINE_H }}
+            >
+              {line.content}
+            </div>
+          ))}
+        </div>
+
+        {/* 文本编辑器 */}
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          spellCheck={spellCheck}
+          className="w-full h-full bg-transparent focus:outline-none"
+          style={{
+            resize: 'none',
+            minHeight: 520,
+            padding: PAD,
+            lineHeight: 1.5,
+            fontSize: 12,
+            position: 'relative',
+            zIndex: 1,
+            color: 'inherit',
+          }}
+        />
+      </div>
     </div>
   );
 }

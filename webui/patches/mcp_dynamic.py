@@ -11,6 +11,7 @@ from __future__ import annotations
 
 
 def apply() -> None:
+    import asyncio
     from contextlib import AsyncExitStack
 
     from nanobot.agent.loop import AgentLoop
@@ -59,6 +60,9 @@ def apply() -> None:
     # close_mcp: close all per-server stacks
     # ------------------------------------------------------------------
     async def _close_mcp_patched(self) -> None:
+        if self._background_tasks:
+            await asyncio.gather(*self._background_tasks, return_exceptions=True)
+            self._background_tasks.clear()
         for stack in list(self._mcp_server_stacks.values()):
             try:
                 await stack.aclose()

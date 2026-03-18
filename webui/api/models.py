@@ -56,7 +56,7 @@ class AgentSettingsResponse(BaseModel):
     max_tokens: int
     temperature: float
     max_iterations: int
-    memory_window: int
+    context_window_tokens: int
     reasoning_effort: str | None
     workspace: str
     restrict_to_workspace: bool
@@ -74,7 +74,7 @@ class AgentSettingsRequest(BaseModel):
     max_tokens: int | None = None
     temperature: float | None = None
     max_iterations: int | None = None
-    memory_window: int | None = None
+    context_window_tokens: int | None = None
     reasoning_effort: str | None = None
     workspace: str | None = None
     restrict_to_workspace: bool | None = None

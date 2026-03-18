@@ -9,7 +9,7 @@ export interface AgentSettings {
   max_tokens: number;
   temperature: number;
   max_iterations: number;
-  memory_window: number;
+  context_window_tokens: number;
   reasoning_effort: string;
   workspace: string;
   send_progress?: boolean;

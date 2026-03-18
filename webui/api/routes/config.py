@@ -57,7 +57,7 @@ async def get_agent_settings(
         max_tokens=d.max_tokens,
         temperature=d.temperature,
         max_iterations=d.max_tool_iterations,
-        memory_window=d.memory_window,
+        context_window_tokens=d.context_window_tokens,
         reasoning_effort=d.reasoning_effort,
         workspace=d.workspace,
         restrict_to_workspace=t.restrict_to_workspace,
@@ -92,8 +92,8 @@ async def update_agent_settings(
         d.temperature = body.temperature
     if body.max_iterations is not None:
         d.max_tool_iterations = body.max_iterations
-    if body.memory_window is not None:
-        d.memory_window = body.memory_window
+    if body.context_window_tokens is not None:
+        d.context_window_tokens = body.context_window_tokens
     if body.reasoning_effort is not None:
         d.reasoning_effort = body.reasoning_effort
     if body.workspace is not None:

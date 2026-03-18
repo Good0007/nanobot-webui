@@ -94,6 +94,7 @@ release-dated:
 # ── Python PyPI publish ───────────────────────
 .PHONY: build-py
 build-py: build-web
+	rm -rf webui/web/dist
 	cp -r web/dist webui/web/dist
 	rm -rf dist/ build/ nanobot_webui.egg-info/
 	python -m build

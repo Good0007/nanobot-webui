@@ -279,7 +279,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       <div className={cn(
         "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold select-none",
         isUser
-          ? "bg-primary text-primary-foreground shadow-sm"
+          ? "bg-orange-200 text-orange-900 shadow-sm dark:bg-orange-800/50 dark:text-orange-100"
           : "overflow-hidden p-0 shadow-sm"
       )}>
         {isUser
@@ -293,7 +293,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         isUser ? "items-end" : "items-start"
       )}>
         {isUser ? (
-          <div className="rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm">
+          <div className="rounded-2xl rounded-tr-sm bg-orange-200 px-4 py-2.5 text-sm leading-relaxed text-orange-900 shadow-sm dark:bg-orange-800/50 dark:text-orange-100">
             <span className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.content}</span>
           </div>
         ) : (

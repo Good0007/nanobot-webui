@@ -279,7 +279,7 @@
     "maxTokens": "Max Tokens",
     "temperature": "Temperature",
     "maxToolIterations": "Max Tool Iterations",
-    "memoryWindow": "Memory Window",
+    "contextWindowTokens": "Context Window (tokens)",
     "reasoningEffort": "Reasoning Effort",
     "workspace": "Workspace",
     "gateway": "Gateway Config",

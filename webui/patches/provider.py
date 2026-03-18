@@ -201,7 +201,8 @@ def apply() -> None:
                 _logger.warning("Failed to write LLM debug log: {}", exc)
 
         async def _patched_chat(self, messages, tools=None, model=None,
-                                max_tokens=4096, temperature=0.7, reasoning_effort=None):
+                                max_tokens=4096, temperature=0.7, reasoning_effort=None,
+                                tool_choice=None):
             # Fast path: already confirmed this base needs Responses API.
             if self.api_base in _responses_api_bases:
                 return await _call_responses_api(self, messages, tools, model, max_tokens, temperature)
@@ -210,7 +211,8 @@ def apply() -> None:
             # 打印消息长度和 tools 长度，帮助调试
             _logger.debug("LLM request '{}' messages_len={} tools_len={}", self.api_base, len(messages), len(tools) if tools else 0)
             result: LLMResponse = await original_chat(
-                self, messages, tools, model, max_tokens, temperature, reasoning_effort
+                self, messages, tools, model, max_tokens, temperature, reasoning_effort,
+                tool_choice=tool_choice
             )
 
             # Detect legacy-protocol rejection and auto-switch.

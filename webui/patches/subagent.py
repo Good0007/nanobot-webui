@@ -174,6 +174,7 @@ def apply() -> None:
         logger.info("Subagent [{}] starting task: {}", task_id, label)
 
         try:
+            from nanobot.agent.skills import BUILTIN_SKILLS_DIR
             from nanobot.agent.tools.filesystem import (
                 EditFileTool, ListDirTool, ReadFileTool, WriteFileTool,
             )
@@ -183,7 +184,8 @@ def apply() -> None:
 
             tools = ToolRegistry()
             allowed_dir = self.workspace if self.restrict_to_workspace else None
-            tools.register(ReadFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            extra_read = [BUILTIN_SKILLS_DIR] if allowed_dir else None
+            tools.register(ReadFileTool(workspace=self.workspace, allowed_dir=allowed_dir, extra_allowed_dirs=extra_read))
             tools.register(WriteFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
             tools.register(EditFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
             tools.register(ListDirTool(workspace=self.workspace, allowed_dir=allowed_dir))
@@ -193,7 +195,7 @@ def apply() -> None:
                 restrict_to_workspace=self.restrict_to_workspace,
                 path_append=self.exec_config.path_append,
             ))
-            tools.register(WebSearchTool(api_key=self.brave_api_key, proxy=self.web_proxy))
+            tools.register(WebSearchTool(config=self.web_search_config, proxy=self.web_proxy))
             tools.register(WebFetchTool(proxy=self.web_proxy))
 
             system_prompt = self._build_subagent_prompt()
@@ -213,9 +215,6 @@ def apply() -> None:
                     messages=messages,
                     tools=tools.get_definitions(),
                     model=self.model,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    reasoning_effort=self.reasoning_effort,
                 )
 
                 if response.has_tool_calls:

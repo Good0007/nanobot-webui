@@ -273,7 +273,7 @@
     "maxTokens": "最大 Token 数",
     "temperature": "温度",
     "maxToolIterations": "最大工具调用轮数",
-    "memoryWindow": "记忆窗口",
+    "contextWindowTokens": "上下文窗口（token 数）",
     "reasoningEffort": "推理强度",
     "workspace": "工作目录",
     "gateway": "网关配置",

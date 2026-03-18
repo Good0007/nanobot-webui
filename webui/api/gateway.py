@@ -30,6 +30,7 @@ class ServiceContainer:
 
     def reload_provider(self) -> None:
         """Hot-swap the LLM provider and all runtime settings on agent and heartbeat."""
+        from nanobot.providers.base import GenerationSettings
         d = self.config.agents.defaults
         new_provider = self.make_provider(self.config)
         if new_provider is not None:
@@ -37,11 +38,15 @@ class ServiceContainer:
             self.heartbeat.provider = new_provider
         # Always sync model and other mutable settings
         self.agent.model = d.model
-        self.agent.max_tokens = d.max_tokens
-        self.agent.temperature = d.temperature
         self.agent.max_iterations = d.max_tool_iterations
-        self.agent.memory_window = d.memory_window
-        self.agent.reasoning_effort = d.reasoning_effort
+        self.agent.context_window_tokens = d.context_window_tokens
+        gen = GenerationSettings(
+            temperature=d.temperature,
+            max_tokens=d.max_tokens,
+            reasoning_effort=d.reasoning_effort,
+        )
+        self.agent.provider.generation = gen
+        self.heartbeat.provider.generation = gen
 
 
 async def start_api_server(

@@ -224,7 +224,7 @@ export default function Chat() {
                     "group relative flex cursor-pointer items-center gap-3 rounded-xl transition-colors",
                     isMobile ? "px-3 py-3" : "px-2 py-1.5",
                     active
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-100"
                       : "hover:bg-muted/60"
                   )}
                   onClick={() => switchSession(s.key)}
@@ -233,7 +233,7 @@ export default function Chat() {
                   <div className={cn(
                     "flex shrink-0 items-center justify-center rounded-full leading-none",
                     isMobile ? "h-11 w-11 text-xl" : "h-6 w-6 text-sm",
-                    active ? "bg-primary-foreground/20" : "bg-muted"
+                    active ? "bg-orange-200 dark:bg-orange-800/60" : "bg-muted"
                   )}>
                     {CHANNEL_ICONS[channel] ?? "💬"}
                   </div>
@@ -249,7 +249,7 @@ export default function Chat() {
                       </span>
                       <span className={cn(
                         "shrink-0 text-[10px] leading-snug",
-                        active ? "text-primary-foreground/60" : "text-muted-foreground/70"
+                        active ? "text-orange-600 dark:text-orange-300" : "text-muted-foreground/70"
                       )}>
                         {formatDate(s.updated_at)}
                       </span>
@@ -257,7 +257,7 @@ export default function Chat() {
                     <p className={cn(
                       "mt-0.5 truncate leading-snug",
                       isMobile ? "text-xs" : "text-[10px]",
-                      active ? "text-primary-foreground/70" : "text-muted-foreground"
+                      active ? "text-orange-700 dark:text-orange-200" : "text-muted-foreground"
                     )}>
                       {s.last_message || "—"}
                     </p>
@@ -270,8 +270,8 @@ export default function Chat() {
                     className={cn(
                       "shrink-0 transition-opacity",
                       isMobile
-                        ? cn("h-8 w-8 opacity-0 active:opacity-100", active && "opacity-100 text-primary-foreground hover:bg-primary-foreground/20")
-                        : cn("h-5 w-5 opacity-0 group-hover:opacity-100", active && "opacity-100 text-primary-foreground hover:bg-primary-foreground/20")
+                        ? cn("h-8 w-8 opacity-0 active:opacity-100", active && "opacity-100 text-orange-700 hover:bg-orange-200/60 dark:text-orange-200 dark:hover:bg-orange-800/40")
+                        : cn("h-5 w-5 opacity-0 group-hover:opacity-100", active && "opacity-100 text-orange-700 hover:bg-orange-200/60 dark:text-orange-200 dark:hover:bg-orange-800/40")
                     )}
                     onClick={(e) => {
                       e.stopPropagation();

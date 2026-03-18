@@ -257,7 +257,7 @@
     "maxTokens": "最大トークン数",
     "temperature": "温度",
     "maxToolIterations": "最大ツール呼び出し回数",
-    "memoryWindow": "メモリウィンドウ",
+    "contextWindowTokens": "コンテキストウィンドウ（トークン数）",
     "reasoningEffort": "推論強度",
     "workspace": "作業ディレクトリ",
     "gateway": "ゲートウェイ設定",

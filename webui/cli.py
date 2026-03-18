@@ -214,6 +214,12 @@ def webui(
         sync_workspace_templates(cfg.workspace_path)
         bus = MessageBus()
         provider = _make_provider(cfg)
+        from nanobot.providers.base import GenerationSettings
+        provider.generation = GenerationSettings(
+            temperature=cfg.agents.defaults.temperature,
+            max_tokens=cfg.agents.defaults.max_tokens,
+            reasoning_effort=cfg.agents.defaults.reasoning_effort,
+        )
         session_manager = SessionManager(cfg.workspace_path)
         cron_store_path = get_cron_dir() / "jobs.json"
         cron = CronService(cron_store_path)
@@ -233,12 +239,9 @@ def webui(
             provider=provider,
             workspace=cfg.workspace_path,
             model=cfg.agents.defaults.model,
-            temperature=cfg.agents.defaults.temperature,
-            max_tokens=cfg.agents.defaults.max_tokens,
             max_iterations=cfg.agents.defaults.max_tool_iterations,
-            memory_window=cfg.agents.defaults.memory_window,
-            reasoning_effort=cfg.agents.defaults.reasoning_effort,
-            brave_api_key=cfg.tools.web.search.api_key or None,
+            context_window_tokens=cfg.agents.defaults.context_window_tokens,
+            web_search_config=cfg.tools.web.search,
             web_proxy=cfg.tools.web.proxy or None,
             exec_config=cfg.tools.exec,
             cron_service=cron,
