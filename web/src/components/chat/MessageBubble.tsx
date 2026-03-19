@@ -188,6 +188,47 @@ function SubAgentToolBlock({ message }: { message: ChatMessage }) {
   );
 }
 
+/** Progress message block — shows progress messages (e.g., "Thinking...", "Searching...") */
+function ProgressMessageBlock({ message }: { message: ChatMessage }) {
+  const isLong = message.content.length > 300;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-lg border text-xs overflow-hidden border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/15">
+      <button
+        onClick={() => isLong && setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center gap-2 px-3 py-1.5 text-left rounded-lg transition-colors",
+          isLong && "hover:bg-amber-100/50 dark:hover:bg-amber-900/30 cursor-pointer",
+          !isLong && "cursor-default"
+        )}
+      >
+        <Info className="h-3 w-3 shrink-0 text-amber-400 dark:text-amber-400" />
+        <span className="font-medium text-amber-500/80 dark:text-amber-400/80">Progress</span>
+        <span className="text-muted-foreground/50">·</span>
+        <span className="font-mono font-medium text-foreground/70 truncate">
+          {message.content}
+        </span>
+        <span className="ml-auto mr-1 shrink-0 text-[10px] text-muted-foreground/40">
+          {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+        {isLong && (
+          open
+            ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+        )}
+      </button>
+      {(open || !isLong) && message.content.length > 80 && (
+        <div className="border-t border-amber-200/40 dark:border-amber-800/30 px-3 py-2">
+          <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-muted-foreground/80">
+            {message.content}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** System message block — gray, collapsed by default (usually the system prompt) */
 function SystemMessageBlock({ message }: { message: ChatMessage }) {
   const [open, setOpen] = useState(false);
@@ -254,6 +295,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   // Tool result — compact collapsible block (no avatar)
   if (message.role === "tool") {
     return <ToolMessageWrapper><ToolResultBlock message={message} /></ToolMessageWrapper>;
+  }
+
+  // Progress message — amber-tinted block with info icon
+  if (message.role === "assistant" && message.isProgress) {
+    return <ToolMessageWrapper><ProgressMessageBlock message={message} /></ToolMessageWrapper>;
   }
 
   // System message — compact info strip, collapsed by default (no avatar)

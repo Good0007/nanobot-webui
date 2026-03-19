@@ -66,6 +66,26 @@ export function ChatWindow() {
           setCurrentSession(msg.session_key);
         }
       } else if (msg.type === "progress") {
+        // add all progress to message list
+        if (msg.content?.trim()) {
+          if (msg.tool_hint) {
+            addMessage({
+              id: nanoid(),
+              role: "tool",
+              content: msg.content,
+              timestamp: new Date().toISOString(),
+              isSubAgent: false,
+            });
+          } else {
+            addMessage({
+              id: nanoid(),
+              role: "assistant",
+              content: msg.content,
+              timestamp: new Date().toISOString(),
+              isProgress: true,
+            });
+          }
+        }
         setProgress(msg.content ?? "");
       } else if (msg.type === "subagent_progress") {
         // SubAgent tool-call hint — arrives after main agent's "done", so render
@@ -86,6 +106,15 @@ export function ChatWindow() {
           useChatStore.getState().setStreaming(assistantMsgIdRef.current, false);
           assistantMsgIdRef.current = null;
         }
+        
+        //clear progress message when done
+        const currentMessages = useChatStore.getState().messages;
+        const filteredMessages = currentMessages.filter(msg => 
+          !(msg.role === "tool" && !msg.isSubAgent) &&
+          !(msg.role === "assistant" && msg.isProgress)
+        );
+        useChatStore.getState().setMessages(filteredMessages);
+        
         if (msg.content?.trim()) {
           addMessage({
             id: nanoid(),
@@ -104,6 +133,15 @@ export function ChatWindow() {
       } else if (msg.type === "error") {
         setProgress("");
         setWaiting(false);
+        
+        //clear progress message when error
+        const currentMessages = useChatStore.getState().messages;
+        const filteredMessages = currentMessages.filter(msg => 
+          !(msg.role === "tool" && !msg.isSubAgent) &&
+          !(msg.role === "assistant" && msg.isProgress)
+        );
+        useChatStore.getState().setMessages(filteredMessages);
+        
         addMessage({
           id: nanoid(),
           role: "assistant",
@@ -141,6 +179,13 @@ export function ChatWindow() {
     wsRef.current?.cancel();
     setWaiting(false);
     setProgress("");
+    
+    const currentMessages = useChatStore.getState().messages;
+    const filteredMessages = currentMessages.filter(msg => 
+      !(msg.role === "tool" && !msg.isSubAgent) &&
+      !(msg.role === "assistant" && msg.isProgress)
+    );
+    useChatStore.getState().setMessages(filteredMessages);
   }, [setProgress, setWaiting]);
 
   return (

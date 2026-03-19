@@ -10,6 +10,7 @@ export interface ChatMessage {
   toolCalls?: ToolCallInfo[];
   name?: string; // tool result: the tool's name
   isSubAgent?: boolean; // message originated from a background SubAgent
+  isProgress?: boolean; // indicates this is a progress message (e.g., "Thinking...", "Searching...")
 }
 
 export interface ToolCallInfo {
