@@ -6,6 +6,7 @@ import { useChatStore } from "../../stores/chatStore";
 import { ChatWebSocket, type WsMessage } from "../../lib/ws";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
+import { useRevokeMessage } from "../../hooks/useSessions";
 
 export function ChatWindow() {
   const { t } = useTranslation();
@@ -13,8 +14,6 @@ export function ChatWindow() {
   const {
     currentSessionKey,
     messages,
-    isWaiting,
-    progressText,
     showToolMessages,
     addMessage,
     setWaiting,
@@ -22,6 +21,14 @@ export function ChatWindow() {
     setCurrentSession,
     toggleToolMessages,
   } = useChatStore();
+
+  // Read per-session state for the active session
+  const sessionState = useChatStore((s) => {
+    const key = s.currentSessionKey ?? "";
+    return s.sessionStates[key] ?? { isWaiting: false, progressText: "" };
+  });
+  const isWaiting = sessionState.isWaiting;
+  const progressText = sessionState.progressText;
 
   const visibleMessages = showToolMessages
     ? messages
@@ -33,6 +40,7 @@ export function ChatWindow() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const handleWsMessageRef = useRef<(msg: WsMessage) => void>(() => {});
   const [isConnected, setIsConnected] = useState(false);
+  const revokeMessage = useRevokeMessage();
 
   useEffect(() => {
     const ws = new ChatWebSocket(
@@ -61,55 +69,77 @@ export function ChatWindow() {
 
   const handleWsMessage = useCallback(
     (msg: WsMessage) => {
+      // Determine which session this message belongs to
+      const msgSessionKey = msg.session_key;
+      const currentKey = useChatStore.getState().currentSessionKey;
+
       if (msg.type === "session_info") {
-        if (msg.session_key && msg.session_key !== useChatStore.getState().currentSessionKey) {
+        if (msg.session_key && msg.session_key !== currentKey) {
           setCurrentSession(msg.session_key);
         }
       } else if (msg.type === "progress") {
-        setProgress(msg.content ?? "");
+        // Update per-session progress
+        const targetKey = msgSessionKey || currentKey || "";
+        setProgress(msg.content ?? "", targetKey);
       } else if (msg.type === "subagent_progress") {
-        // SubAgent tool-call hint — arrives after main agent's "done", so render
-        // as a persistent SubAgent bubble rather than the transient progress indicator.
-        if (msg.content?.trim()) {
-          addMessage({
-            id: nanoid(),
-            role: "tool",
-            content: msg.content,
-            timestamp: new Date().toISOString(),
-            isSubAgent: true,
-          });
+        // Only show in UI if this is for the currently viewed session
+        if (!msgSessionKey || msgSessionKey === currentKey) {
+          if (msg.content?.trim()) {
+            addMessage({
+              id: nanoid(),
+              role: "tool",
+              content: msg.content,
+              timestamp: new Date().toISOString(),
+              isSubAgent: true,
+            });
+          }
         }
       } else if (msg.type === "done") {
-        setProgress("");
-        setWaiting(false);
+        const targetKey = msgSessionKey || currentKey || "";
+        setProgress("", targetKey);
+        setWaiting(false, targetKey);
+
         if (assistantMsgIdRef.current) {
           useChatStore.getState().setStreaming(assistantMsgIdRef.current, false);
           assistantMsgIdRef.current = null;
         }
-        if (msg.content?.trim()) {
+
+        // Only add message to UI if it's for the currently viewed session
+        if (!msgSessionKey || msgSessionKey === currentKey) {
+          if (msg.content?.trim()) {
+            addMessage({
+              id: nanoid(),
+              role: "assistant",
+              content: msg.content,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+
+        // Refresh sessions list and the session's messages
+        qc.invalidateQueries({ queryKey: ["sessions"] });
+        if (targetKey) {
+          qc.invalidateQueries({ queryKey: ["sessions", targetKey, "messages"] });
+        }
+      } else if (msg.type === "error") {
+        const targetKey = msgSessionKey || currentKey || "";
+        setProgress("", targetKey);
+        setWaiting(false, targetKey);
+
+        // Only show error in UI if it's for the currently viewed session
+        if (!msgSessionKey || msgSessionKey === currentKey) {
           addMessage({
             id: nanoid(),
             role: "assistant",
-            content: msg.content,
+            content: `⚠️ ${msg.content ?? t("common.error")}`,
             timestamp: new Date().toISOString(),
           });
         }
-        // Refresh sessions list and current session's messages (so tool call/result
-        // messages that were saved server-side appear without requiring a page reload).
+      } else if (msg.type === "revoke_ok") {
+        // Refresh the session messages after revoke
+        const targetKey = msgSessionKey || currentKey || "";
+        qc.invalidateQueries({ queryKey: ["sessions", targetKey, "messages"] });
         qc.invalidateQueries({ queryKey: ["sessions"] });
-        const sessKey = useChatStore.getState().currentSessionKey;
-        if (sessKey) {
-          qc.invalidateQueries({ queryKey: ["sessions", sessKey, "messages"] });
-        }
-      } else if (msg.type === "error") {
-        setProgress("");
-        setWaiting(false);
-        addMessage({
-          id: nanoid(),
-          role: "assistant",
-          content: `⚠️ ${msg.content ?? t("common.error")}`,
-          timestamp: new Date().toISOString(),
-        });
       }
     },
     [addMessage, qc, setCurrentSession, setProgress, setWaiting, t]
@@ -130,18 +160,75 @@ export function ChatWindow() {
         content,
         timestamp: new Date().toISOString(),
       });
-      setWaiting(true);
-      setProgress(t("chat.thinking"));
+      const key = currentSessionKey ?? "";
+      setWaiting(true, key);
+      setProgress(t("chat.thinking"), key);
       wsRef.current?.send(content, currentSessionKey ?? undefined);
     },
     [addMessage, currentSessionKey, setProgress, setWaiting, t]
   );
 
   const handleStop = useCallback(() => {
-    wsRef.current?.cancel();
-    setWaiting(false);
-    setProgress("");
-  }, [setProgress, setWaiting]);
+    const key = currentSessionKey ?? "";
+    wsRef.current?.cancel(key);
+    setWaiting(false, key);
+    setProgress("", key);
+  }, [currentSessionKey, setProgress, setWaiting]);
+
+  const handleRevoke = useCallback(
+    (messageId: string) => {
+      if (!currentSessionKey) return;
+      // Find the message index in the *server* data by matching content + role.
+      // The `messageId` is the local nanoid, find the corresponding server index.
+      const msg = messages.find((m) => m.id === messageId);
+      if (!msg) return;
+
+      // Find index among all messages (including filtered ones)
+      const allMsgs = useChatStore.getState().messages;
+      // Count visible messages of the same role+content to find server-side index
+      // We need to find the index in the original session messages list
+      let serverIndex = -1;
+      let matchCount = 0;
+      for (let i = 0; i < allMsgs.length; i++) {
+        if (allMsgs[i].id === messageId) {
+          serverIndex = matchCount;
+          break;
+        }
+        // Only count messages that would exist on the server (skip locally-added errors)
+        if (allMsgs[i].role !== "assistant" || !allMsgs[i].content.startsWith("⚠️")) {
+          matchCount++;
+        }
+      }
+
+      if (serverIndex >= 0) {
+        revokeMessage.mutate(
+          { key: currentSessionKey, index: serverIndex },
+          {
+            onSuccess: () => {
+              // Remove from local store immediately
+              const state = useChatStore.getState();
+              const idx = state.messages.findIndex((m) => m.id === messageId);
+              if (idx >= 0) {
+                const newMsgs = [...state.messages];
+                if (msg.role === "user") {
+                  // Also remove subsequent non-user messages
+                  let end = idx + 1;
+                  while (end < newMsgs.length && newMsgs[end].role !== "user") {
+                    end++;
+                  }
+                  newMsgs.splice(idx, end - idx);
+                } else {
+                  newMsgs.splice(idx, 1);
+                }
+                useChatStore.getState().setMessages(newMsgs);
+              }
+            },
+          }
+        );
+      }
+    },
+    [currentSessionKey, messages, revokeMessage]
+  );
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
@@ -159,7 +246,11 @@ export function ChatWindow() {
         ) : (
           <div className="space-y-4">
             {visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onRevoke={handleRevoke}
+              />
             ))}
           </div>
         )}

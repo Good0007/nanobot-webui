@@ -19,34 +19,61 @@ export interface ToolCallInfo {
   output?: string;
 }
 
+/** Per-session transient state (waiting indicator, progress text). */
+interface SessionState {
+  isWaiting: boolean;
+  progressText: string;
+}
+
 interface ChatState {
   currentSessionKey: string | null;
   messages: ChatMessage[];
-  isWaiting: boolean;
-  progressText: string;
   showToolMessages: boolean;
   mobileShowChat: boolean;
+
+  /** Per-session waiting / progress state — keyed by session key. */
+  sessionStates: Record<string, SessionState>;
+
+  // Convenience getters for the *current* session
+  isWaiting: boolean;
+  progressText: string;
+
   setMobileShowChat: (v: boolean) => void;
   setCurrentSession: (key: string | null) => void;
   addMessage: (msg: ChatMessage) => void;
   appendAssistantText: (id: string, text: string) => void;
   setStreaming: (id: string, isStreaming: boolean) => void;
-  setProgress: (text: string) => void;
-  setWaiting: (v: boolean) => void;
+  /** Set progress for a specific session (defaults to current). */
+  setProgress: (text: string, sessionKey?: string) => void;
+  /** Set waiting for a specific session (defaults to current). */
+  setWaiting: (v: boolean, sessionKey?: string) => void;
   clearMessages: () => void;
   setMessages: (msgs: ChatMessage[]) => void;
   toggleToolMessages: () => void;
+  /** Get waiting state for a specific session. */
+  getSessionState: (key: string) => SessionState;
 }
+
+const DEFAULT_SESSION_STATE: SessionState = { isWaiting: false, progressText: "" };
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       currentSessionKey: null,
       messages: [],
-      isWaiting: false,
-      progressText: "",
       showToolMessages: false,
       mobileShowChat: false,
+      sessionStates: {},
+
+      // Derived from sessionStates[currentSessionKey]
+      get isWaiting() {
+        const s = get();
+        return (s.sessionStates[s.currentSessionKey ?? ""] ?? DEFAULT_SESSION_STATE).isWaiting;
+      },
+      get progressText() {
+        const s = get();
+        return (s.sessionStates[s.currentSessionKey ?? ""] ?? DEFAULT_SESSION_STATE).progressText;
+      },
 
       setMobileShowChat: (v) => set({ mobileShowChat: v }),
 
@@ -54,7 +81,6 @@ export const useChatStore = create<ChatState>()(
         set((state) => ({
           currentSessionKey: key,
           messages: state.currentSessionKey === key ? state.messages : [],
-          progressText: state.currentSessionKey === key ? state.progressText : "",
         })),
 
       addMessage: (msg) =>
@@ -74,16 +100,37 @@ export const useChatStore = create<ChatState>()(
           ),
         })),
 
-      setProgress: (progressText) => set({ progressText }),
+      setProgress: (progressText, sessionKey?) =>
+        set((state) => {
+          const key = sessionKey ?? state.currentSessionKey ?? "";
+          const prev = state.sessionStates[key] ?? DEFAULT_SESSION_STATE;
+          return {
+            sessionStates: { ...state.sessionStates, [key]: { ...prev, progressText } },
+          };
+        }),
 
-      setWaiting: (isWaiting) => set({ isWaiting }),
+      setWaiting: (isWaiting, sessionKey?) =>
+        set((state) => {
+          const key = sessionKey ?? state.currentSessionKey ?? "";
+          const prev = state.sessionStates[key] ?? DEFAULT_SESSION_STATE;
+          return {
+            sessionStates: {
+              ...state.sessionStates,
+              [key]: { ...prev, isWaiting, ...(isWaiting ? {} : { progressText: "" }) },
+            },
+          };
+        }),
 
-      clearMessages: () => set({ messages: [], progressText: "" }),
+      clearMessages: () => set({ messages: [] }),
 
       setMessages: (messages) => set({ messages }),
 
       toggleToolMessages: () =>
         set((state) => ({ showToolMessages: !state.showToolMessages })),
+
+      getSessionState: (key) => {
+        return get().sessionStates[key] ?? DEFAULT_SESSION_STATE;
+      },
     }),
     {
       name: "nanobot-chat",

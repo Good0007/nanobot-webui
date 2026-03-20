@@ -86,6 +86,43 @@ async def get_session_memory(
     }
 
 
+@router.delete("/{key:path}/messages/{index}", status_code=200)
+async def revoke_message(
+    key: str,
+    index: int,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    svc: Annotated[ServiceContainer, Depends(get_services)],
+) -> dict:
+    """Revoke (delete) a message by index.
+
+    If the target is a user message, also remove the subsequent assistant/tool
+    response messages that form the reply pair.
+    """
+    if not _is_own_session(key, current_user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
+
+    session = svc.session_manager.get_or_create(key)
+    if index < 0 or index >= len(session.messages):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid message index")
+
+    removed = session.messages[index]
+    if removed.get("role") == "user":
+        # Remove user message and all subsequent non-user messages (the response pair)
+        end = index + 1
+        while end < len(session.messages) and session.messages[end].get("role") != "user":
+            end += 1
+        count = end - index
+        del session.messages[index:end]
+    else:
+        count = 1
+        del session.messages[index]
+
+    from datetime import datetime
+    session.updated_at = datetime.now()
+    svc.session_manager.save(session)
+    return {"removed": count}
+
+
 @router.delete("/{key:path}", status_code=204)
 async def delete_session(
     key: str,

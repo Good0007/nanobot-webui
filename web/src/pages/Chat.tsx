@@ -27,6 +27,7 @@ export default function Chat() {
   const mobileShowChat = useChatStore((s) => s.mobileShowChat);
   const setMobileShowChat = useChatStore((s) => s.setMobileShowChat);
   const { currentSessionKey, setCurrentSession, setMessages } = useChatStore();
+  const sessionStates = useChatStore((s) => s.sessionStates);
   const { data: sessions } = useSessions();
   const { data: sessionMsgs, isSuccess: historyLoaded } = useSessionMessages(currentSessionKey ?? "");
   const deleteSession = useDeleteSession();
@@ -217,6 +218,7 @@ export default function Chat() {
               const maxLen = isMobile ? 28 : 14;
               const label = rawLabel.length > maxLen ? rawLabel.slice(0, maxLen) + "…" : rawLabel;
               const active = s.key === currentSessionKey;
+              const sessionBusy = sessionStates[s.key]?.isWaiting ?? false;
               return (
                 <div
                   key={s.key}
@@ -259,7 +261,16 @@ export default function Chat() {
                       isMobile ? "text-xs" : "text-[10px]",
                       active ? "text-orange-700 dark:text-orange-200" : "text-muted-foreground"
                     )}>
-                      {s.last_message || "—"}
+                      {sessionBusy ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span className="flex gap-0.5">
+                            <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                            <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                            <span className="h-1 w-1 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+                          </span>
+                          <span className="text-primary/70">Processing…</span>
+                        </span>
+                      ) : (s.last_message || "—")}
                     </p>
                   </div>
 

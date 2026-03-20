@@ -7,10 +7,11 @@ import type { ChatMessage } from "../../stores/chatStore";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { useAuthStore } from "../../stores/authStore";
-import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Wrench, Copy, Check } from "lucide-react";
+import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Wrench, Copy, Check, Undo2 } from "lucide-react";
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  onRevoke?: (messageId: string) => void;
 }
 
 function splitThinking(content: string): { type: "text" | "thinking"; content: string }[] {
@@ -228,7 +229,7 @@ function ToolMessageWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onRevoke }: MessageBubbleProps) {
   const user = useAuthStore((s) => s.user);
 
   // Don't render anything for empty/whitespace messages
@@ -338,6 +339,16 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               {copied
                 ? <Check className="h-3 w-3 text-emerald-500" />
                 : <Copy className="h-3 w-3" />}
+            </button>
+          )}
+          {!message.isStreaming && onRevoke && (
+            <button
+              onClick={() => onRevoke(message.id)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-red-500 p-0.5 rounded"
+              aria-label="Revoke message"
+              title={isUser ? "Revoke message & response" : "Revoke message"}
+            >
+              <Undo2 className="h-3 w-3" />
             </button>
           )}
         </div>

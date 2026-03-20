@@ -140,7 +140,9 @@ async def ws_chat(websocket: WebSocket) -> None:
 
     await websocket.send_json({"type": "session_info", "session_key": session_key})
 
-    current_task: asyncio.Task | None = None
+    # Per-session task tracking: allows multiple sessions to run concurrently
+    # through a single WebSocket connection.
+    session_tasks: dict[str, asyncio.Task] = {}
 
     try:
         while True:
@@ -148,13 +150,61 @@ async def ws_chat(websocket: WebSocket) -> None:
             msg_type = raw.get("type")
 
             if msg_type == "cancel":
-                if current_task and not current_task.done():
-                    current_task.cancel()
-                    await websocket.send_json({"type": "error", "content": "cancelled"})
+                # Cancel the task for a specific session, or the current session
+                cancel_key = raw.get("session_key") or session_key
+                task = session_tasks.get(cancel_key)
+                if task and not task.done():
+                    task.cancel()
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": "cancelled",
+                        "session_key": cancel_key,
+                    })
 
             elif msg_type == "new_session":
                 session_key = f"web:{user['id']}:{uuid.uuid4().hex[:8]}"
                 await websocket.send_json({"type": "session_info", "session_key": session_key})
+
+            elif msg_type == "revoke":
+                # Revoke (delete) a specific message by index from session history
+                revoke_key = raw.get("session_key") or session_key
+                msg_index = raw.get("index")
+                if msg_index is not None and _is_allowed_session(revoke_key):
+                    try:
+                        session = container.agent.sessions.get_or_create(revoke_key)
+                        idx = int(msg_index)
+                        if 0 <= idx < len(session.messages):
+                            removed = session.messages[idx]
+                            # If revoking a user message, also remove the subsequent
+                            # assistant/tool messages that form the response pair
+                            if removed.get("role") == "user":
+                                # Find extent: remove everything until the next user msg
+                                end = idx + 1
+                                while end < len(session.messages) and session.messages[end].get("role") != "user":
+                                    end += 1
+                                del session.messages[idx:end]
+                            else:
+                                del session.messages[idx]
+                            from datetime import datetime
+                            session.updated_at = datetime.now()
+                            container.agent.sessions.save(session)
+                            await websocket.send_json({
+                                "type": "revoke_ok",
+                                "session_key": revoke_key,
+                                "index": msg_index,
+                            })
+                        else:
+                            await websocket.send_json({
+                                "type": "error",
+                                "content": "Invalid message index",
+                                "session_key": revoke_key,
+                            })
+                    except Exception as exc:
+                        await websocket.send_json({
+                            "type": "error",
+                            "content": f"Revoke failed: {exc}",
+                            "session_key": revoke_key,
+                        })
 
             elif msg_type == "message":
                 content = raw.get("content", "")
@@ -168,19 +218,25 @@ async def ws_chat(websocket: WebSocket) -> None:
                 if not content:
                     continue
 
-                if current_task and not current_task.done():
+                effective_key = msg_session_key or session_key
+
+                # Check if this specific session already has an active task
+                existing_task = session_tasks.get(effective_key)
+                if existing_task and not existing_task.done():
                     await websocket.send_json({
                         "type": "error",
-                        "content": "Previous message still processing",
+                        "content": "Previous message still processing in this session",
+                        "session_key": effective_key,
                     })
                     continue
 
-                async def _on_progress(text: str, *, tool_hint: bool = False) -> None:
+                async def _on_progress(text: str, *, tool_hint: bool = False, _sk: str = effective_key) -> None:
                     try:
                         await websocket.send_json({
                             "type": "progress",
                             "content": text,
                             "tool_hint": tool_hint,
+                            "session_key": _sk,
                         })
                     except Exception:
                         pass
@@ -205,37 +261,23 @@ async def ws_chat(websocket: WebSocket) -> None:
                                 "type": "subagent_progress",
                                 "content": text,
                                 "tool_hint": True,
+                                "session_key": sess,
                             })
                         except Exception:
                             pass
 
                     async def _on_subagent_save_turn(all_messages: list) -> None:
-                        """Persist SubAgent's full tool-call chain to the main session.
-
-                        all_messages structure (from SubAgent):
-                          [0] system prompt  (skip)
-                          [1] user: task     (skip)
-                          [2+] assistant(tool_calls) / tool / assistant(final)
-
-                        Tool-call messages are saved with role="sub_tool" so the UI
-                        can render them differently.  session.py patches get_history()
-                        to remap sub_tool → assistant/tool before sending to any LLM.
-
-                        A system bridge message is prepended to separate the main
-                        agent's last assistant turn from SubAgent content.
-                        """
+                        """Persist SubAgent's full tool-call chain to the main session."""
                         try:
                             from datetime import datetime
-                            _TRUNCATE = 500  # matches AgentLoop._TOOL_RESULT_MAX_CHARS
+                            _TRUNCATE = 500
                             session = container.agent.sessions.get_or_create(sess)
-                            # Separator: not shown as a user bubble in the UI
                             session.add_message("system", "[Background task progress]")
                             now = datetime.now().isoformat()
-                            for m in all_messages[2:]:  # skip SubAgent system+user
+                            for m in all_messages[2:]:
                                 role = m.get("role", "")
                                 content = m.get("content") or ""
                                 if role == "assistant" and m.get("tool_calls"):
-                                    # Tool-call declaration → sub_tool
                                     session.messages.append({
                                         "role": "sub_tool",
                                         "content": content,
@@ -243,7 +285,6 @@ async def ws_chat(websocket: WebSocket) -> None:
                                         "timestamp": now,
                                     })
                                 elif role == "tool":
-                                    # Tool result → sub_tool (truncate if large)
                                     if isinstance(content, str) and len(content) > _TRUNCATE:
                                         content = content[:_TRUNCATE] + "\n... (truncated)"
                                     session.messages.append({
@@ -254,7 +295,6 @@ async def ws_chat(websocket: WebSocket) -> None:
                                         "timestamp": now,
                                     })
                                 elif role == "assistant":
-                                    # Final result (no tool_calls) — keep as assistant
                                     if not content:
                                         continue
                                     session.messages.append({
@@ -268,9 +308,12 @@ async def ws_chat(websocket: WebSocket) -> None:
                             pass
 
                     async def _on_subagent_done(text: str) -> None:
-                        # Session already saved by _on_subagent_save_turn before this fires.
                         try:
-                            await websocket.send_json({"type": "done", "content": text})
+                            await websocket.send_json({
+                                "type": "done",
+                                "content": text,
+                                "session_key": sess,
+                            })
                         except Exception:
                             pass
 
@@ -285,8 +328,6 @@ async def ws_chat(websocket: WebSocket) -> None:
                             chat_id=user["id"],
                             on_progress=_on_progress,
                         )
-                        # If the agent replied via message() tool, process_direct
-                        # returns "".  Drain whatever the patched callback captured.
                         if not response:
                             collected: list[str] = []
                             while not capture_q.empty():
@@ -295,13 +336,21 @@ async def ws_chat(websocket: WebSocket) -> None:
                                 except asyncio.QueueEmpty:
                                     break
                             response = "\n\n".join(c for c in collected if c)
-                        await websocket.send_json({"type": "done", "content": response})
+                        await websocket.send_json({
+                            "type": "done",
+                            "content": response,
+                            "session_key": sess,
+                        })
                     except asyncio.CancelledError:
                         pass
                     except Exception as exc:
                         logger.error("WebSocket agent error: {}", exc)
                         try:
-                            await websocket.send_json({"type": "error", "content": str(exc)})
+                            await websocket.send_json({
+                                "type": "error",
+                                "content": str(exc),
+                                "session_key": sess,
+                            })
                         except Exception:
                             pass
                     finally:
@@ -310,16 +359,16 @@ async def ws_chat(websocket: WebSocket) -> None:
                             lst.remove(capture_q)
                         if not lst:
                             _web_captures.pop(uid, None)
-                        # Unregister only when WebSocket closes or errors, not here,
-                        # because SubAgent may still be running in the background.
-                        # The registry entry is overwritten on the next message and
-                        # errors inside _emit_progress are silently swallowed.
+                        # Clean up finished task from tracking dict
+                        session_tasks.pop(sess, None)
 
-                current_task = asyncio.create_task(_run_agent(content, session_key))
+                task = asyncio.create_task(_run_agent(content, effective_key))
+                session_tasks[effective_key] = task
 
     except WebSocketDisconnect:
-        if current_task and not current_task.done():
-            current_task.cancel()
+        for task in session_tasks.values():
+            if not task.done():
+                task.cancel()
     except Exception as exc:
         logger.error("WebSocket error: {}", exc)
         try:

@@ -1,12 +1,13 @@
 import { useAuthStore } from "../stores/authStore";
 
-export type WsMessageType = "session_info" | "progress" | "subagent_progress" | "done" | "error";
+export type WsMessageType = "session_info" | "progress" | "subagent_progress" | "done" | "error" | "revoke_ok";
 
 export interface WsMessage {
   type: WsMessageType;
   content?: string;
   session_key?: string;
   tool_hint?: boolean;
+  index?: number;
 }
 
 type MessageHandler = (msg: WsMessage) => void;
@@ -80,9 +81,16 @@ export class ChatWebSocket {
     this.sessionKey = sessionKey;
   }
 
-  cancel() {
+  cancel(sessionKey?: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "cancel" }));
+      this.ws.send(JSON.stringify({ type: "cancel", session_key: sessionKey }));
+    }
+  }
+
+  /** Revoke (delete) a message by index in a session. */
+  revoke(sessionKey: string, index: number) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "revoke", session_key: sessionKey, index }));
     }
   }
 
