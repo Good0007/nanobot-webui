@@ -10,6 +10,7 @@ export interface ChatMessage {
   toolCalls?: ToolCallInfo[];
   name?: string; // tool result: the tool's name
   isSubAgent?: boolean; // message originated from a background SubAgent
+  serverIndex?: number; // original index in the server session.messages array (used for revoke)
 }
 
 export interface ToolCallInfo {

@@ -55,6 +55,7 @@ export default function Chat() {
     // Filter out empty messages only (assistant stubs with null/empty content).
     // tool and system messages are included but rendered differently.
     const msgs = (sessionMsgs ?? [])
+      .map((m, idx) => ({ ...m, _serverIdx: idx })) // preserve original server index before filtering
       .filter((m) =>
         typeof m.content === "string" &&
         m.content.trim().length > 0 &&
@@ -69,6 +70,7 @@ export default function Chat() {
         content: m.content as string,
         timestamp: m.timestamp ?? new Date().toISOString(),
         name: m.name ?? undefined,
+        serverIndex: m._serverIdx,
       }));
     // Only overwrite if we got actual history (avoids wiping persisted messages on new empty sessions)
     if (msgs.length > 0) {
@@ -81,9 +83,13 @@ export default function Chat() {
       // time (no Z) while JS new Date().toISOString() uses UTC (with Z), making string
       // comparison unreliable across timezones.
       const prevIds = new Set(lastSetMsgsRef.current.map((m) => m.id));
-      const serverContents = new Set(msgs.map((m) => m.content));
+      // Only preserve locally-added error messages — they are never saved server-side.
+      // All other messages (including done responses) will be re-loaded from server data.
       const localToPreserve = useChatStore.getState().messages.filter(
-        (m) => !prevIds.has(m.id) && m.role !== "user" && !serverContents.has(m.content)
+        (m) =>
+          !prevIds.has(m.id) &&
+          m.role === "assistant" &&
+          m.content.startsWith("⚠️")
       );
       const merged = localToPreserve.length > 0 ? [...msgs, ...localToPreserve] : msgs;
       lastSetMsgsRef.current = merged;

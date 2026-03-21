@@ -79,6 +79,24 @@ export function ChatWindow() {
         }
       } else if (msg.type === "progress") {
         // Update per-session progress
+          if (msg.content?.trim()) {
+            if (msg.tool_hint) {
+              addMessage({
+                id: nanoid(),
+                role: "tool",
+                content: msg.content,
+                timestamp: new Date().toISOString(),
+              });
+            } else {
+              //追加到 assistant 消息区
+              addMessage({
+                id: nanoid(),
+                role: "assistant",
+                content: msg.content,
+                timestamp: new Date().toISOString(),
+              });
+            }
+        }
         const targetKey = msgSessionKey || currentKey || "";
         setProgress(msg.content ?? "", targetKey);
       } else if (msg.type === "subagent_progress") {
@@ -178,27 +196,13 @@ export function ChatWindow() {
   const handleRevoke = useCallback(
     (messageId: string) => {
       if (!currentSessionKey) return;
-      // Find the message index in the *server* data by matching content + role.
-      // The `messageId` is the local nanoid, find the corresponding server index.
       const msg = messages.find((m) => m.id === messageId);
       if (!msg) return;
 
-      // Find index among all messages (including filtered ones)
-      const allMsgs = useChatStore.getState().messages;
-      // Count visible messages of the same role+content to find server-side index
-      // We need to find the index in the original session messages list
-      let serverIndex = -1;
-      let matchCount = 0;
-      for (let i = 0; i < allMsgs.length; i++) {
-        if (allMsgs[i].id === messageId) {
-          serverIndex = matchCount;
-          break;
-        }
-        // Only count messages that would exist on the server (skip locally-added errors)
-        if (allMsgs[i].role !== "assistant" || !allMsgs[i].content.startsWith("⚠️")) {
-          matchCount++;
-        }
-      }
+      // serverIndex is stored when messages are loaded from the server in Chat.tsx.
+      // Locally-added messages (e.g. error bubbles) have no serverIndex and cannot be revoked.
+      const serverIndex = msg.serverIndex;
+      if (serverIndex === undefined) return;
 
       if (serverIndex >= 0) {
         revokeMessage.mutate(
