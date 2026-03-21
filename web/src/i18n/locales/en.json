@@ -30,6 +30,7 @@
     "password": "Password",
     "loginButton": "Sign In",
     "loginFailed": "Invalid username or password",
+    "fieldRequired": "Please enter your username and password",
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
@@ -383,6 +384,10 @@
     "chinese": "中文",
     "english": "English",
     "japanese": "日本語",
+    "traditionalChinese": "繁體中文",
+    "korean": "한국어",
+    "german": "Deutsch",
+    "french": "Français",
     "optional": "Optional",
     "dismiss": "Dismiss"
   },

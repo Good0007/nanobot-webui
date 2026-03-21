@@ -32,6 +32,10 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      toast.error(t("auth.fieldRequired"));
+      return;
+    }
     setLoading(true);
     try {
       const res = await api.post("/auth/login", { username, password });
@@ -49,14 +53,17 @@ export default function Login() {
     i18n.changeLanguage(lang);
   };
 
-  const getLanguageLabel = () => {
-    const labels: Record<string, string> = {
-      zh: "中文",
-      en: "English",
-      ja: "日本語",
-    };
-    return labels[i18n.language] || "中文";
+  const LANG_LABELS: Record<string, string> = {
+    zh: "中文",
+    "zh-TW": "繁體中文",
+    en: "English",
+    ja: "日本語",
+    ko: "한국어",
+    de: "Deutsch",
+    fr: "Français",
   };
+
+  const getLanguageLabel = () => LANG_LABELS[i18n.language] ?? "English";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-950 dark:via-gray-900 dark:to-orange-950 px-4">
@@ -77,11 +84,23 @@ export default function Login() {
             <DropdownMenuItem onClick={() => changeLanguage("zh")}>
               中文
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => changeLanguage("zh-TW")}>
+              繁體中文
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => changeLanguage("en")}>
               English
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => changeLanguage("ja")}>
               日本語
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => changeLanguage("ko")}>
+              한국어
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => changeLanguage("de")}>
+              Deutsch
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => changeLanguage("fr")}>
+              Français
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -121,7 +140,6 @@ export default function Login() {
                   autoComplete="username"
                   className="pl-10 h-10 border-orange-200 focus-visible:ring-orange-500 bg-gradient-to-r from-orange-50/50 to-white dark:from-orange-950/30 dark:to-gray-800"
                   placeholder={t("auth.username")}
-                  required
                 />
               </div>
             </div>
@@ -139,7 +157,6 @@ export default function Login() {
                   autoComplete="current-password"
                   className="pl-10 h-10 border-orange-200 focus-visible:ring-orange-500 bg-gradient-to-r from-orange-50/50 to-white dark:from-orange-950/30 dark:to-gray-800"
                   placeholder={t("auth.password")}
-                  required
                 />
               </div>
             </div>

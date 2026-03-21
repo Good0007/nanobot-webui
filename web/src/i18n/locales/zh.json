@@ -30,6 +30,7 @@
     "password": "密码",
     "loginButton": "登录",
     "loginFailed": "用户名或密码错误",
+    "fieldRequired": "请填写用户名和密码",
     "changePassword": "修改密码",
     "currentPassword": "当前密码",
     "newPassword": "新密码",
@@ -379,6 +380,10 @@
     "chinese": "中文",
     "english": "English",
     "japanese": "日本語",
+    "traditionalChinese": "繁體中文",
+    "korean": "한국어",
+    "german": "Deutsch",
+    "french": "Français",
     "optional": "可选",
     "dismiss": "忽略"
   },

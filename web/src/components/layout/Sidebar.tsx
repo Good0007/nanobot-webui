@@ -25,6 +25,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { useState } from "react";
@@ -103,11 +106,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     location.pathname === item.path ||
     (item.path !== "/dashboard" && location.pathname.startsWith(item.path));
 
-  const nextLangLabel = i18n.language === "zh" ? "English" : i18n.language === "en" ? "日本語" : "中文";
-  const toggleLang = () => {
-    const next = i18n.language === "zh" ? "en" : i18n.language === "en" ? "ja" : "zh";
-    i18n.changeLanguage(next);
+  const LANG_LABELS: Record<string, string> = {
+    zh: "中文", "zh-TW": "繁體中文", en: "English", ja: "日本語", ko: "한국어", de: "Deutsch", fr: "Français",
   };
+  const currentLangLabel = LANG_LABELS[i18n.language] ?? "English";
 
   return (
     <aside
@@ -203,9 +205,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="end" className="w-48">
-                <DropdownMenuItem onClick={toggleLang}>
-                  <Languages className="mr-2 h-4 w-4" />{nextLangLabel}
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Languages className="mr-2 h-4 w-4" />{currentLangLabel}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {Object.entries(LANG_LABELS).map(([code, label]) => (
+                      <DropdownMenuItem
+                        key={code}
+                        onClick={() => i18n.changeLanguage(code)}
+                        className={i18n.language === code ? "font-semibold text-primary" : ""}
+                      >
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setShowChangePwd(true)}>
                   <KeyRound className="mr-2 h-4 w-4" />{t("auth.changePassword")}
@@ -242,9 +257,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="end" className="w-48">
-                <DropdownMenuItem onClick={toggleLang}>
-                  <Languages className="mr-2 h-4 w-4" />{nextLangLabel}
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Languages className="mr-2 h-4 w-4" />{currentLangLabel}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {Object.entries(LANG_LABELS).map(([code, label]) => (
+                      <DropdownMenuItem
+                        key={code}
+                        onClick={() => i18n.changeLanguage(code)}
+                        className={i18n.language === code ? "font-semibold text-primary" : ""}
+                      >
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setShowChangePwd(true)}>
                   <KeyRound className="mr-2 h-4 w-4" />{t("auth.changePassword")}
