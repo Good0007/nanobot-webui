@@ -19,8 +19,7 @@
 - [功能特性](#功能特性)
 - [快速开始](#快速开始)
   - [pip 安装（推荐）](#pip-安装推荐)
-  - [Docker](#docker)
-- [命令行参考](#命令行参考)
+  - [Docker](#docker)- [微信通道](#微信通道)- [命令行参考](#命令行参考)
 - [开发模式](#开发模式)
 - [项目结构](#项目结构)
 - [认证说明](#认证说明)
@@ -51,7 +50,7 @@
 | **仪表板** | 通道健康状态、会话 / 技能 / 定时任务统计一览 |
 | **会话** | 通过 WebSocket 与 Agent 实时对话 |
 | **模型提供商** | 配置 OpenAI、Anthropic、DeepSeek、Azure 等的 API Key 和地址 |
-| **通道** | 查看和配置所有 IM 通道（Telegram、Discord、飞书、钉钉、Slack、QQ、WhatsApp、邮件、Matrix、企业微信） |
+| **通道** | 查看和配置所有 IM 通道（微信、Telegram、Discord、飞书、钉钉、Slack、QQ、WhatsApp、邮件、Matrix、企业微信）；微信支持直接在 UI 中扫码登录 |
 | **MCP 工具服务器** | 管理 Model Context Protocol 工具服务器 |
 | **技能** | 启用 / 禁用 Agent 技能，在线编辑工作区技能 |
 | **定时任务** | 新建、编辑、启停定时任务 |
@@ -160,6 +159,20 @@ make release-dated  # 构建并推送 :YYYY-MM-DD + :latest（多架构）
 
 ---
 
+## 微信通道
+
+微信通道通过 [iLink](https://ilink.dev) 接入，需要有效的 iLink 订阅。通道实现来自 [nanobot PR #2348](https://github.com/HKUDS/nanobot/pull/2348)。
+
+1. **扫码登录（二选一）**
+   - **WebUI：** 进入 **通道** 页面 → 微信卡片 → 点击 **扫码登录**
+   - **命令行（无界面服务器）：** 运行 `nanobot weixin login`，在终端打印二维码后扫码
+2. **启用通道** — 登录后 WebUI 会自动更新 `~/.nanobot/config.json`。
+
+> **注意：** 微信目前仅支持绑定一个账号，再次扫码会覆盖之前的绑定。
+> 微信会话会定期失效，在通道页面重新扫码即可登录，无需重启服务。
+
+---
+
 ## 命令行参考
 
 安装 `nanobot-webui` 后，`nanobot` 命令会新增以下子命令：
@@ -205,6 +218,18 @@ nanobot webui logs -f -n 100    # 实时跟踪，显示最近 100 行
 ```
 
 > 日志文件位于 `~/.nanobot/webui.log`
+
+### `nanobot weixin login` — 微信扫码登录
+
+```bash
+nanobot weixin login
+```
+
+在终端打印 ASCII 二维码，用手机微信扫描完成登录。登录成功后将 Bot Token 保存到 `~/.nanobot/weixin/account.json`。
+
+> 适用于无界面服务器场景。WebUI 通道页面提供相同的登录流程，并显示图形二维码。
+
+---
 
 ### `nanobot stop` — 停止后台服务
 
@@ -274,35 +299,53 @@ nanobot-webui/
 ├── webui/                      # Python 包（可作为 `webui` 导入）
 │   ├── __init__.py
 │   ├── __main__.py             # 入口：python -m webui
+│   ├── cli.py                  # 注入到 nanobot CLI 的 Typer 子命令
+│   ├── channels/               # 通道插件（通过 entry-points 注册）
+│   │   └── weixin.py           #   微信通道（基于 iLink 的扫码登录）
 │   ├── web/
 │   │   └── dist/               # 编译后的 React 静态资源（由 bun run build 生成）
-│   └── api/                    # FastAPI 后端
-│       ├── auth.py             # JWT + bcrypt 工具
-│       ├── users.py            # 用户存储（~/.nanobot/webui_users.json）
-│       ├── deps.py             # FastAPI 依赖注入
-│       ├── gateway.py          # ServiceContainer + 服务生命周期
-│       ├── server.py           # FastAPI 应用工厂（静态托管、SPA 回退）
-│       ├── channel_ext.py      # ExtendedChannelManager（非侵入式子类）
-│       ├── models.py           # Pydantic 响应模型
-│       └── routes/             # 按业务域拆分的路由文件
-│           ├── auth.py         #   POST /api/auth/login|register|change-password
-│           ├── channels.py     #   GET|PATCH /api/channels
-│           ├── config.py       #   GET|PATCH /api/config
-│           ├── cron.py         #   CRUD /api/cron
-│           ├── mcp.py          #   GET|PATCH /api/mcp
-│           ├── providers.py    #   GET|PATCH /api/providers
-│           ├── sessions.py     #   GET|DELETE /api/sessions
-│           ├── skills.py       #   GET|POST /api/skills
-│           ├── users.py        #   CRUD /api/users（仅管理员）
-│           └── ws.py           #   WebSocket /ws/chat
+│   ├── api/                    # FastAPI 后端
+│   │   ├── auth.py             # JWT + bcrypt 工具
+│   │   ├── users.py            # 用户存储（~/.nanobot/webui_users.json）
+│   │   ├── deps.py             # FastAPI 依赖注入
+│   │   ├── gateway.py          # ServiceContainer + 服务生命周期
+│   │   ├── server.py           # FastAPI 应用工厂（静态托管、SPA 回退）
+│   │   ├── channel_ext.py      # ExtendedChannelManager（非侵入式子类）
+│   │   ├── middleware.py       # 请求中间件（日志、CORS 等）
+│   │   ├── models.py           # Pydantic 响应模型
+│   │   ├── provider_meta.py    # 提供商元数据与能力注册表
+│   │   └── routes/             # 按业务域拆分的路由文件
+│   │       ├── auth.py         #   POST /api/auth/login|register|change-password
+│   │       ├── channels.py     #   GET|PATCH /api/channels（含微信 QR 接口）
+│   │       ├── config.py       #   GET|PATCH /api/config
+│   │       ├── cron.py         #   CRUD /api/cron
+│   │       ├── mcp.py          #   GET|PATCH /api/mcp
+│   │       ├── openai_proxy.py #   OpenAI 兼容代理 /api/v1/...
+│   │       ├── providers.py    #   GET|PATCH /api/providers
+│   │       ├── sessions.py     #   GET|DELETE /api/sessions
+│   │       ├── skills.py       #   GET|POST /api/skills
+│   │       ├── users.py        #   CRUD /api/users（仅管理员）
+│   │       └── ws.py           #   WebSocket /ws/chat
+│   ├── patches/                # 最小化运行时 monkey-patch（非侵入式）
+│   │   ├── channels.py         #   空 allow_from → 允许所有人
+│   │   ├── mcp_dynamic.py      #   MCP 服务器动态启用/禁用
+│   │   ├── provider.py         #   提供商热重载支持
+│   │   ├── session.py          #   会话持久化调整
+│   │   ├── skills.py           #   技能热重载助手
+│   │   └── subagent.py         #   子 Agent 路由修复
+│   └── utils/
+│       └── webui_config.py     # 统一 WebUI 配置存储（~/.nanobot/webui_config.json）
 ├── web/                        # React 18 + TypeScript 前端源码
 │   ├── src/
 │   │   ├── pages/              # 每个路由对应一个页面组件
+│   │   │   ├── Channels.tsx    #   IM 通道配置（含微信扫码登录）
+│   │   │   └── ...             #   Chat / Dashboard / Settings 等
 │   │   ├── components/         # 布局、聊天、通用 UI 组件
 │   │   ├── hooks/              # TanStack Query 数据钩子
 │   │   ├── stores/             # Zustand 状态（认证、聊天）
 │   │   ├── lib/                # axios 实例、WebSocket 管理器、工具函数
-│   │   └── i18n/               # 中 / 英 JSON 翻译文件
+│   │   ├── i18n/               # 国际化（中 / 英 / 日 等）
+│   │   └── theme/              # next-themes 配置
 │   ├── eslint.config.js
 │   └── package.json
 ├── Dockerfile                  # 多阶段构建：bun 编译前端 → Python 运行时
@@ -311,7 +354,7 @@ nanobot-webui/
 └── setup.py                    # 构建 hook：自动运行 bun run build 并将 dist 复制到 webui/
 ```
 
-**设计原则：** 后端完全非侵入式——仅导入 nanobot 库，不修改其源码。运行时的 monkey-patch（在 `__main__.py` 中应用）仅限于体验优化，例如将空 `allow_from` 列表视为"允许所有人"。
+**设计原则：** 后端完全非侵入式——仅导入 nanobot 库，不修改其源码。运行时的 monkey-patch（在 `webui/patches/` 中）仅限于体验优化，启动时一次性应用，不影响核心库初始化。
 
 ---
 
