@@ -1,5 +1,23 @@
 # Release Notes
 
+## v0.2.3 — 2026-03-22
+
+**WeChat Channel & QR Login**
+- Add WeChat (weixin) channel support based on iLink API
+- Add `nanobot weixin login` CLI command for headless QR code login confirmed via scanning
+- Add `WeixinQrPanel` in the WebUI Channels page for a seamless in-browser scan-to-login experience
+- Support real-time login status polling and automatic token persistence to `~/.nanobot/weixin/account.json`
+- Add `qrcode[pil]` as an optional dependency via `pyproject.toml` [weixin] extra (included in default dependencies for convenience)
+- Localized WeChat login labels and status messages (en / zh)
+
+**Channel Management**
+- Prioritize WeChat (weixin) in the channel list for Chinese users
+- Ensure the WeChat channel is Always visible in the UI even before initial configuration is saved
+- Support masking sensitive tokens in the WeChat configuration view
+- Fix `getattr` missing default value in channel reload route to prevent potential crashes
+
+---
+
 ## v0.2.2 — 2026-03-21
 
 **Multi-Session Chat**
