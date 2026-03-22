@@ -1,4 +1,5 @@
 export const CHANNEL_ICONS: Record<string, string> = {
+  weixin: "💚",
   web: "💬",
   telegram: "✈️",
   whatsapp: "💬",

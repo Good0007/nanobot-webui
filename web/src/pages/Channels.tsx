@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useChannels, useUpdateChannel, useReloadChannel, useReloadAllChannels, useToggleChannel } from "../hooks/useChannels";
+import {
+  useChannels, useUpdateChannel, useReloadChannel, useReloadAllChannels, useToggleChannel,
+  useWeixinQrStart, useWeixinQrStatus,
+} from "../hooks/useChannels";
 import {
   Card,
   CardContent,
@@ -20,8 +23,9 @@ import {
 import { SecretInput } from "../components/shared/SecretInput";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { Skeleton } from "../components/ui/skeleton";
-import { RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronRight, QrCode, CheckCircle2, Clock } from "lucide-react";
 import { isMasked } from "../lib/utils";
+import { toast } from "sonner";
 
 import { CHANNEL_ICONS } from "../lib/channelIcons";
 
@@ -32,6 +36,97 @@ const SECRET_FIELDS = new Set([
 
 function isSecretField(key: string): boolean {
   return SECRET_FIELDS.has(key);
+}
+
+// ---------------------------------------------------------------------------
+// WeChat QR login panel
+// ---------------------------------------------------------------------------
+
+function WeixinQrPanel({ loggedIn, onLoginSuccess }: { loggedIn: boolean; onLoginSuccess: () => void }) {
+  const { t } = useTranslation();
+  const [qrcodeId, setQrcodeId] = useState<string | null>(null);
+  const [qrImage, setQrImage] = useState<string>("");
+  const [scanUrl, setScanUrl] = useState<string>("");
+  const [done, setDone] = useState(false);
+
+  const qrStart = useWeixinQrStart();
+  const { data: qrStatus } = useWeixinQrStatus(qrcodeId);
+
+  const handleConfirmed = useCallback(() => {
+    setDone(true);
+    setQrcodeId(null);
+    toast.success(t("channels.weixin.confirmed"));
+    onLoginSuccess();
+  }, [t, onLoginSuccess]);
+
+  useEffect(() => {
+    if (qrStatus?.status === "confirmed") handleConfirmed();
+    if (qrStatus?.status === "expired") setQrcodeId(null); // re-enable the login button
+  }, [qrStatus?.status, handleConfirmed]);
+
+  const startQr = async () => {
+    setDone(false);
+    setQrcodeId(null);
+    try {
+      const data = await qrStart.mutateAsync();
+      setQrcodeId(data.qrcode_id);
+      setQrImage(data.qr_image);
+      setScanUrl(data.scan_url);
+    } catch {
+      toast.error(t("channels.weixin.startFailed"));
+    }
+  };
+
+  const statusText = () => {
+    if (qrStatus?.status === "scaned") return t("channels.weixin.scaned");
+    return t("channels.weixin.waitScan");
+  };
+
+  return (
+    <div className="rounded-lg border border-dashed p-4 space-y-3">
+      {/* Login state header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          {loggedIn || done ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-green-600 font-medium">{t("channels.weixin.loggedIn")}</span>
+            </>
+          ) : (
+            <>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{t("channels.weixin.notLoggedIn")}</span>
+            </>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant={loggedIn || done ? "outline" : "default"}
+          onClick={startQr}
+          disabled={qrStart.isPending || !!qrcodeId}
+        >
+          <QrCode className="mr-1.5 h-3.5 w-3.5" />
+          {loggedIn || done ? t("channels.weixin.relogin") : t("channels.weixin.qrLogin")}
+        </Button>
+      </div>
+
+      {/* QR code display */}
+      {qrcodeId && (
+        <div className="flex flex-col items-center gap-2 pt-1">
+          {qrImage ? (
+            <img src={qrImage} alt="WeChat QR" className="w-40 h-40 rounded border" />
+          ) : (
+            <div className="w-40 h-40 rounded border flex items-center justify-center bg-muted text-xs text-center p-2 break-all">
+              {scanUrl}
+            </div>
+          )}
+          <p className={`text-xs ${qrStatus?.status === "scaned" ? "text-green-600" : "text-muted-foreground"}`}>
+            {statusText()}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Channels() {
@@ -58,7 +153,7 @@ export default function Channels() {
     const draft = drafts[name] ?? {};
     const payload: Record<string, string> = {};
     for (const [k, v] of Object.entries({ ...config, ...draft })) {
-      if (k === "enabled") continue; // managed separately by the Switch
+      if (k === "enabled" || k === "loggedIn") continue;
       if (typeof v === "boolean") {
         payload[k] = String(v);
       } else if (typeof v === "string" && !isMasked(v)) {
@@ -97,7 +192,7 @@ export default function Channels() {
             const isExpand = expanded.includes(ch.name);
             const icon = CHANNEL_ICONS[ch.name] ?? "📡";
             const configEntries = Object.entries(ch.config ?? {}).filter(
-              ([k, v]) => k !== "enabled" && (typeof v === "string" || typeof v === "number" || typeof v === "boolean" || Array.isArray(v))
+              ([k, v]) => k !== "enabled" && k !== "loggedIn" && (typeof v === "string" || typeof v === "number" || typeof v === "boolean" || Array.isArray(v))
             );
             return (
               <Card key={ch.name} className={ch.enabled ? "" : "opacity-60"}>
@@ -146,6 +241,15 @@ export default function Channels() {
                         {ch.error}
                       </p>
                     )}
+
+                    {/* WeChat: QR code login panel (shown before config fields) */}
+                    {ch.name === "weixin" && (
+                      <WeixinQrPanel
+                        loggedIn={ch.config?.loggedIn === true}
+                        onLoginSuccess={() => reload.mutate(ch.name)}
+                      />
+                    )}
+
                     <div className="grid gap-3 sm:grid-cols-2">
                       {configEntries.map(([k, v]) => {
                         const strVal = Array.isArray(v) ? v.join(", ") : String(v);

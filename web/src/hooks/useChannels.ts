@@ -11,6 +11,16 @@ export interface ChannelStatus {
   config: Record<string, unknown>;
 }
 
+export interface WeixinQrStartData {
+  qrcode_id: string;
+  qr_image: string;
+  scan_url: string;
+}
+
+export interface WeixinQrStatusData {
+  status: "wait" | "scaned" | "confirmed" | "expired";
+}
+
 export function useChannels() {
   return useQuery<ChannelStatus[]>({
     queryKey: ["channels"],
@@ -60,6 +70,26 @@ export function useToggleChannel() {
       api.patch(`/channels/${name}`, { enabled }).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["channels"] });
+    },
+  });
+}
+
+export function useWeixinQrStart() {
+  return useMutation<WeixinQrStartData>({
+    mutationFn: () => api.post("/channels/weixin/qr/start").then((r) => r.data),
+  });
+}
+
+export function useWeixinQrStatus(qrcodeId: string | null) {
+  return useQuery<WeixinQrStatusData>({
+    queryKey: ["weixin-qr-status", qrcodeId],
+    queryFn: () =>
+      api.get(`/channels/weixin/qr/status?qrcode_id=${qrcodeId}`).then((r) => r.data),
+    enabled: !!qrcodeId,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status;
+      if (s === "confirmed" || s === "expired") return false;
+      return 2000;
     },
   });
 }

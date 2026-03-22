@@ -99,6 +99,7 @@
     "title": "Channels",
     "name": "Channel",
     "names": {
+      "weixin": "WeChat",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
       "discord": "Discord",
@@ -110,6 +111,18 @@
       "matrix": "Matrix",
       "mochat": "WeCom (MoChat)",
       "web": "Web"
+    },
+    "weixin": {
+      "qrLogin": "Scan QR Code",
+      "relogin": "Re-login",
+      "loggedIn": "Logged in",
+      "notLoggedIn": "Not logged in",
+      "waitScan": "Scan the QR code with WeChat",
+      "scaned": "Scanned — please confirm on your phone",
+      "confirmed": "Login successful!",
+      "expired": "QR code expired, please refresh",
+      "loginFailed": "Login failed, please try again",
+      "startFailed": "Failed to get QR code, check your network"
     },
     "status": "Status",    "enabled": "Enabled",
     "disabled": "Disabled",    "running": "Running",

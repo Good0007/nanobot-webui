@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import base64
+import io
+import json
+import os
+from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 
 from webui.api.deps import get_services, require_admin
 from webui.api.gateway import ServiceContainer
@@ -12,20 +18,75 @@ from webui.api.models import ChannelStatus, UpdateChannelRequest
 
 router = APIRouter()
 
-# Maps channel name → config attribute on ChannelsConfig
+# weixin is first — it's the primary Chinese messaging channel
 _CHANNEL_NAMES = [
+    "weixin",
     "telegram", "whatsapp", "discord", "feishu", "dingtalk",
     "email", "slack", "qq", "matrix", "mochat",
 ]
+
+
+# ---------------------------------------------------------------------------
+# WeChat (weixin) helpers
+# ---------------------------------------------------------------------------
+
+def _weixin_state_file() -> Path:
+    from nanobot.config.paths import get_runtime_subdir
+    d = get_runtime_subdir("weixin")
+    d.mkdir(parents=True, exist_ok=True)
+    return d / "account.json"
+
+
+def _weixin_logged_in() -> bool:
+    f = _weixin_state_file()
+    if not f.exists():
+        return False
+    try:
+        return bool(json.loads(f.read_text()).get("token"))
+    except Exception:
+        return False
+
+
+def _weixin_default_config() -> dict[str, Any]:
+    from webui.channels.weixin import WeixinConfig
+    return WeixinConfig().model_dump(by_alias=True)
+
+
+def _ilink_headers(*, auth_token: str | None = None) -> dict[str, str]:
+    """Build per-request iLink API headers (random UIN, matching weixin.py)."""
+    uint32 = int.from_bytes(os.urandom(4), "big")
+    wechat_uin = base64.b64encode(str(uint32).encode()).decode()
+    h: dict[str, str] = {
+        "X-WECHAT-UIN": wechat_uin,
+        "Content-Type": "application/json",
+        "AuthorizationType": "ilink_bot_token",
+    }
+    if auth_token:
+        h["Authorization"] = f"Bearer {auth_token}"
+    return h
+
+
+class WeixinQrStartResponse(BaseModel):
+    qrcode_id: str
+    qr_image: str  # data:image/png;base64,...
+    scan_url: str  # fallback URL if qrcode lib unavailable
+
+
+class WeixinQrStatusResponse(BaseModel):
+    status: str  # wait | scaned | confirmed | expired
 
 
 def _channel_config_dict(name: str, svc: ServiceContainer) -> dict[str, Any]:
     """Return the channel config as a dict (camelCase keys, secrets masked)."""
     cfg = getattr(svc.config.channels, name, None)
     if cfg is None:
-        return {}
-    raw: dict[str, Any] = cfg if isinstance(cfg, dict) else cfg.model_dump(by_alias=True)
-    raw = dict(raw)  # ensure mutable copy
+        if name == "weixin":
+            raw: dict[str, Any] = _weixin_default_config()
+        else:
+            return {}
+    else:
+        raw = cfg if isinstance(cfg, dict) else cfg.model_dump(by_alias=True)
+        raw = dict(raw)  # ensure mutable copy
     # Mask common secret fields
     for key in ("token", "appSecret", "secret", "imapPassword", "smtpPassword",
                 "bridgeToken", "accessToken", "appToken", "botToken",
@@ -33,6 +94,9 @@ def _channel_config_dict(name: str, svc: ServiceContainer) -> dict[str, Any]:
                 "access_token", "app_token", "bot_token"):
         if key in raw and raw[key]:
             raw[key] = f"••••{str(raw[key])[-4:]}"
+    # Inject weixin login state so the frontend can show QR login button
+    if name == "weixin":
+        raw["loggedIn"] = _weixin_logged_in()
     return raw
 
 
@@ -53,13 +117,14 @@ async def list_channels(
 
     for name in _CHANNEL_NAMES:
         ch_cfg = getattr(svc.config.channels, name, None)
-        if ch_cfg is None:
+        # Always include weixin (show default config when not yet saved to nanobot.yaml)
+        if ch_cfg is None and name != "weixin":
             continue
         running_info = status_map.get(name, {})
         result.append(
             ChannelStatus(
                 name=name,
-                enabled=_ch_enabled(ch_cfg),
+                enabled=_ch_enabled(ch_cfg) if ch_cfg is not None else False,
                 running=running_info.get("running", False),
                 config=_channel_config_dict(name, svc),
             )
@@ -78,7 +143,11 @@ async def update_channel(
 
     ch_cfg = getattr(svc.config.channels, name, None)
     if ch_cfg is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Channel '{name}' not found")
+        if name == "weixin":
+            # weixin may not be in config yet — bootstrap with defaults
+            ch_cfg = _weixin_default_config()
+        else:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Channel '{name}' not found")
 
     # Only update fields that are provided and don't contain mask placeholders.
     # Use by_alias=True (camelCase) so that merging camelCase payload keys from
@@ -134,11 +203,11 @@ async def reload_channel(
     await svc.channels.reload_channel(name)
 
     status_map = svc.channels.get_status()
-    ch_cfg = getattr(svc.config.channels, name)
+    ch_cfg = getattr(svc.config.channels, name, None)
     running_info = status_map.get(name, {})
     return ChannelStatus(
         name=name,
-        enabled=_ch_enabled(ch_cfg),
+        enabled=_ch_enabled(ch_cfg) if ch_cfg is not None else False,
         running=running_info.get("running", False),
         config=_channel_config_dict(name, svc),
     )
@@ -150,3 +219,107 @@ async def reload_all_channels(
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> None:
     await svc.channels.reload_all(svc.config)
+
+
+# ---------------------------------------------------------------------------
+# WeChat QR code login endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/weixin/qr/start", response_model=WeixinQrStartResponse)
+async def weixin_qr_start(
+    _admin: Annotated[dict, Depends(require_admin)],
+    svc: Annotated[ServiceContainer, Depends(get_services)],  # noqa: ARG001
+) -> WeixinQrStartResponse:
+    """Start a WeChat QR code login session.
+
+    Calls the iLink API to obtain a QR code, then returns the qrcode_id
+    (used for polling) and a base64-encoded PNG image for display.
+    """
+    import httpx
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(
+            "https://ilinkai.weixin.qq.com/ilink/bot/get_bot_qrcode",
+            params={"bot_type": "3"},
+            headers=_ilink_headers(),
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    qrcode_id: str = data.get("qrcode", "")
+    scan_url: str = data.get("qrcode_img_content") or qrcode_id
+
+    if not qrcode_id:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Failed to obtain QR code from WeChat API")
+
+    # Generate QR code PNG with Python qrcode library (installed via [weixin] extra)
+    qr_image = ""
+    try:
+        import qrcode  # type: ignore[import]
+
+        qr = qrcode.QRCode(border=1)
+        qr.add_data(scan_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_image = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    except ImportError:
+        pass  # frontend will fall back to displaying scan_url as text
+
+    return WeixinQrStartResponse(qrcode_id=qrcode_id, qr_image=qr_image, scan_url=scan_url)
+
+
+@router.get("/weixin/qr/status", response_model=WeixinQrStatusResponse)
+async def weixin_qr_status(
+    qrcode_id: Annotated[str, Query(...)],
+    _admin: Annotated[dict, Depends(require_admin)],
+    svc: Annotated[ServiceContainer, Depends(get_services)],
+) -> WeixinQrStatusResponse:
+    """Poll WeChat QR code login status.
+
+    On "confirmed": saves token to account.json, enables weixin in config,
+    and triggers a channel reload so the channel connects immediately.
+    """
+    import httpx
+    from nanobot.config.loader import save_config
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            "https://ilinkai.weixin.qq.com/ilink/bot/get_qrcode_status",
+            params={"qrcode": qrcode_id},
+            headers={**_ilink_headers(), "iLink-App-ClientVersion": "1"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    qr_status: str = data.get("status", "wait")
+
+    if qr_status == "confirmed":
+        token: str = data.get("bot_token", "")
+        bot_baseurl: str = data.get("baseurl", "https://ilinkai.weixin.qq.com")
+        if token:
+            # Persist token to account.json (weixin channel reads this on start)
+            state_data = {
+                "token": token,
+                "get_updates_buf": "",
+                "base_url": bot_baseurl,
+            }
+            _weixin_state_file().write_text(json.dumps(state_data, ensure_ascii=False))
+
+            # Enable weixin in nanobot config and persist
+            ch_cfg = getattr(svc.config.channels, "weixin", None)
+            if ch_cfg is None:
+                new_cfg: dict[str, Any] = _weixin_default_config()
+            elif isinstance(ch_cfg, dict):
+                new_cfg = dict(ch_cfg)
+            else:
+                new_cfg = ch_cfg.model_dump(by_alias=True)
+            new_cfg["enabled"] = True
+            setattr(svc.config.channels, "weixin", new_cfg)
+            save_config(svc.config)
+
+            # Reload channel so it starts immediately with the new token
+            await svc.channels.reload_channel("weixin")
+
+    return WeixinQrStatusResponse(status=qr_status)

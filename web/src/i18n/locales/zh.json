@@ -99,6 +99,7 @@
     "title": "通道",
     "name": "通道名称",
     "names": {
+      "weixin": "微信",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
       "discord": "Discord",
@@ -110,6 +111,18 @@
       "matrix": "Matrix",
       "mochat": "企业微信 (MoChat)",
       "web": "网页"
+    },
+    "weixin": {
+      "qrLogin": "扫码登录",
+      "relogin": "重新登录",
+      "loggedIn": "已登录",
+      "notLoggedIn": "未登录",
+      "waitScan": "请用微信扫描上方二维码",
+      "scaned": "已扫码，请在手机上确认",
+      "confirmed": "登录成功！",
+      "expired": "二维码已过期，请刷新",
+      "loginFailed": "登录失败，请重试",
+      "startFailed": "获取二维码失败，请检查网络"
     },
     "status": "状态",
     "enabled": "已启用",

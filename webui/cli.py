@@ -295,6 +295,110 @@ def webui_logs(
         subprocess.run(["tail", "-n", str(lines), str(log)])
 
 
+# ── `weixin` sub-app (`nanobot weixin login`) ─────────────────────────────────
+
+weixin_app = typer.Typer(
+    name="weixin",
+    help="Manage WeChat (微信) channel.",
+    invoke_without_command=True,
+    no_args_is_help=True,
+)
+app.add_typer(weixin_app, name="weixin")
+
+
+@weixin_app.command("login")
+def weixin_login() -> None:
+    """Log in to WeChat via QR code and save the bot token."""
+    import asyncio as _asyncio
+
+    import httpx as _httpx
+    from rich.console import Console as _Console
+
+    con = _Console()
+
+    async def _do_login() -> None:
+        from nanobot.config.paths import get_runtime_subdir
+        import base64 as _b64
+        import json as _json
+        import os as _os
+
+        state_dir = get_runtime_subdir("weixin")
+        state_dir.mkdir(parents=True, exist_ok=True)
+        state_file = state_dir / "account.json"
+
+        BASE_URL = "https://ilinkai.weixin.qq.com"
+        BASE_INFO = {"channel_version": "1.0.2"}
+
+        def _headers() -> dict:
+            uin = _b64.b64encode(str(int.from_bytes(_os.urandom(4), "big")).encode()).decode()
+            return {
+                "X-WECHAT-UIN": uin,
+                "Content-Type": "application/json",
+                "AuthorizationType": "ilink_bot_token",
+            }
+
+        async with _httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+            con.print("[bold]微信登录 — 获取二维码...[/bold]")
+            resp = await client.get(
+                f"{BASE_URL}/ilink/bot/get_bot_qrcode",
+                params={"bot_type": "3"},
+                headers=_headers(),
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            qrcode_id = data.get("qrcode", "")
+            scan_url = data.get("qrcode_img_content") or qrcode_id
+            if not qrcode_id:
+                con.print(f"[red]获取二维码失败: {data}[/red]")
+                return
+
+            # Print QR code in terminal
+            try:
+                import qrcode as _qr
+                qr = _qr.QRCode(border=1)
+                qr.add_data(scan_url)
+                qr.make(fit=True)
+                qr.print_ascii(invert=True)
+            except ImportError:
+                con.print(f"[dim]登录 URL (安装 qrcode 包可显示二维码): {scan_url}[/dim]")
+
+            con.print("[bold]请用微信扫描上方二维码[/bold]")
+
+            while True:
+                await _asyncio.sleep(1)
+                s_resp = await client.get(
+                    f"{BASE_URL}/ilink/bot/get_qrcode_status",
+                    params={"qrcode": qrcode_id},
+                    headers={**_headers(), "iLink-App-ClientVersion": "1"},
+                )
+                s_resp.raise_for_status()
+                s = s_resp.json()
+                status = s.get("status", "")
+
+                if status == "scaned":
+                    con.print("[yellow]已扫码，请在手机上确认...[/yellow]")
+                elif status == "confirmed":
+                    token = s.get("bot_token", "")
+                    base_url = s.get("baseurl", BASE_URL)
+                    if not token:
+                        con.print("[red]登录确认但未收到 token[/red]")
+                        return
+                    state_file.write_text(_json.dumps({
+                        "token": token,
+                        "get_updates_buf": "",
+                        "base_url": base_url,
+                    }, ensure_ascii=False))
+                    con.print(f"[green]✓ 微信登录成功！Token 已保存到 {state_file}[/green]")
+                    con.print("[dim]重启 nanobot 或在 WebUI 通道页点击重载即可生效。[/dim]")
+                    return
+                elif status == "expired":
+                    con.print("[red]二维码已过期，请重新运行 nanobot weixin login[/red]")
+                    return
+
+    _asyncio.run(_do_login())
+
+
 # ── `stop` command ────────────────────────────────────────────────────────────
 
 
