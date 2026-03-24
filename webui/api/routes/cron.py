@@ -1,4 +1,4 @@
-"""Cron jobs routes (CRUD)."""
+"""Cron jobs routes (CRUD) + execution history."""
 
 from __future__ import annotations
 
@@ -6,11 +6,19 @@ import time
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from webui.api.deps import get_services, require_admin
 from webui.api.gateway import ServiceContainer
-from webui.api.models import CronJobInfo, CronJobRequest, CronScheduleModel, CronStateModel, CronPayloadModel
+from webui.api.models import (
+    CronJobInfo,
+    CronJobRequest,
+    CronScheduleModel,
+    CronStateModel,
+    CronPayloadModel,
+    MessageInfo,
+    SessionInfo,
+)
 
 router = APIRouter()
 
@@ -142,3 +150,80 @@ async def delete_job(
     removed = svc.cron.remove_job(job_id)
     if not removed:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{job_id}' not found")
+
+
+# ---------------------------------------------------------------------------
+# Cron execution history (session viewer)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/sessions", response_model=list[SessionInfo])
+async def list_cron_sessions(
+    _admin: Annotated[dict, Depends(require_admin)],
+    svc: Annotated[ServiceContainer, Depends(get_services)],
+    job_id: str | None = Query(None, description="Filter sessions by job ID"),
+    search: str | None = Query(None, description="Search sessions by key or last message"),
+) -> list[SessionInfo]:
+    """List all sessions with a ``cron:`` prefix — these are created by cron job executions."""
+    all_sessions = svc.session_manager.list_sessions()
+    cron_sessions = [s for s in all_sessions if s.get("key", "").startswith("cron")]
+
+    # Filter by job_id: matches both "cron:<job_id>" (legacy) and "cron:<job_id>:<ts>" (new)
+    if job_id:
+        cron_sessions = [
+            s for s in cron_sessions
+            if _session_belongs_to_job(s.get("key", ""), job_id)
+        ]
+
+    # Free-text search on key and last_message
+    if search:
+        q = search.lower()
+        cron_sessions = [
+            s for s in cron_sessions
+            if q in s.get("key", "").lower() or q in (s.get("last_message") or "").lower()
+        ]
+
+    return [
+        SessionInfo(
+            key=s["key"],
+            created_at=s.get("created_at"),
+            updated_at=s.get("updated_at"),
+            last_message=s.get("last_message"),
+        )
+        for s in sorted(cron_sessions, key=lambda s: s.get("updated_at", ""), reverse=True)
+    ]
+
+
+def _session_belongs_to_job(session_key: str, job_id: str) -> bool:
+    """Check if a session key belongs to a given job ID.
+
+    Supports both legacy format ``cron:<job_id>`` and new format ``cron:<job_id>:<ts>``.
+    """
+    # Strip the "cron:" prefix
+    rest = session_key[5:] if session_key.startswith("cron:") else session_key
+    # Exact match (legacy single-session) or starts with job_id followed by ":"
+    return rest == job_id or rest.startswith(f"{job_id}:")
+
+
+@router.get("/sessions/{key:path}/messages", response_model=list[MessageInfo])
+async def get_cron_session_messages(
+    key: str,
+    _admin: Annotated[dict, Depends(require_admin)],
+    svc: Annotated[ServiceContainer, Depends(get_services)],
+) -> list[MessageInfo]:
+    """Get messages for a specific cron session."""
+    if not key.startswith("cron"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Not a cron session")
+
+    session = svc.session_manager.get_or_create(key)
+    return [
+        MessageInfo(
+            role=m.get("role", "unknown"),
+            content=m.get("content"),
+            timestamp=m.get("timestamp"),
+            tool_calls=m.get("tool_calls"),
+            tool_call_id=m.get("tool_call_id"),
+            name=m.get("name"),
+        )
+        for m in session.messages
+    ]
