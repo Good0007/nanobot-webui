@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { TransitionLink as Link } from "../shared/TransitionLink";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../stores/authStore";
 import { cn } from "../../lib/utils";

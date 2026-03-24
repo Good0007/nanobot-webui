@@ -67,18 +67,18 @@ function sidToKey(sid: string): string {
 }
 
 /** Human-readable description of a schedule */
-function scheduleLabel(s: CronSchedule): string {
+function scheduleLabel(s: CronSchedule, t: (key: string, opts?: Record<string, unknown>) => string): string {
   switch (s.kind) {
     case "cron":
       return s.expr ?? "—";
     case "every": {
       if (!s.every_ms) return "—";
       const secs = s.every_ms / 1000;
-      if (secs < 60) return `Every ${secs}s`;
+      if (secs < 60) return t("cron.everySeconds", { n: secs });
       const mins = secs / 60;
-      if (mins < 60) return `Every ${mins}min`;
+      if (mins < 60) return t("cron.everyMinutes", { n: mins });
       const hrs = mins / 60;
-      return `Every ${hrs}h`;
+      return t("cron.everyHours", { n: hrs });
     }
     case "at":
       return s.at_ms ? new Date(s.at_ms).toLocaleString() : "—";
@@ -159,16 +159,16 @@ function CronForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cron">Cron Expression</SelectItem>
-              <SelectItem value="every">Interval (every N)</SelectItem>
-              <SelectItem value="at">One-time (at)</SelectItem>
+              <SelectItem value="cron">{t("cron.kindCron")}</SelectItem>
+              <SelectItem value="every">{t("cron.kindEvery")}</SelectItem>
+              <SelectItem value="at">{t("cron.kindAt")}</SelectItem>
             </SelectContent>
           </Select>
 
           {kind === "cron" && (
             <div className="space-y-2">
               <div className="space-y-1">
-                <Label className="text-xs">Cron Expression</Label>
+                <Label className="text-xs">{t("cron.kindCronLabel")}</Label>
                 <Input
                   className="font-mono text-sm h-8"
                   value={expr}
@@ -176,11 +176,11 @@ function CronForm({
                   placeholder="0 * * * *"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Format: minute hour day month weekday (e.g. "*/5 * * * *" = every 5 min)
+                  {t("cron.kindCronFormat")}
                 </p>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Timezone (optional)</Label>
+                <Label className="text-xs">{t("cron.timezone")}</Label>
                 <Input
                   className="text-sm h-8"
                   value={tz}
@@ -193,7 +193,7 @@ function CronForm({
 
           {kind === "every" && (
             <div className="space-y-1">
-              <Label className="text-xs">Interval (minutes)</Label>
+              <Label className="text-xs">{t("cron.intervalMinutes")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -206,7 +206,7 @@ function CronForm({
 
           {kind === "at" && (
             <div className="space-y-1">
-              <Label className="text-xs">Run at</Label>
+              <Label className="text-xs">{t("cron.runAt")}</Label>
               <Input
                 type="datetime-local"
                 className="text-sm h-8"
@@ -230,16 +230,16 @@ function CronForm({
         {/* Deliver to channel */}
         <div className="flex items-center gap-3">
           <Switch checked={deliver} onCheckedChange={setDeliver} id="deliver" />
-          <Label htmlFor="deliver">Deliver to channel</Label>
+          <Label htmlFor="deliver">{t("cron.deliverToChannel")}</Label>
         </div>
         {deliver && (
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Channel</Label>
+              <Label>{t("cron.channel")}</Label>
               <Input value={channel} onChange={(e) => setChannel(e.target.value)} placeholder="telegram" />
             </div>
             <div className="space-y-1">
-              <Label>To</Label>
+              <Label>{t("cron.to")}</Label>
               <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="chat_id" />
             </div>
           </div>
@@ -254,7 +254,7 @@ function CronForm({
           {kind === "at" && (
             <div className="flex items-center gap-3">
               <Switch checked={deleteAfterRun} onCheckedChange={setDeleteAfterRun} id="delAfterRun" />
-              <Label htmlFor="delAfterRun">Delete after run</Label>
+              <Label htmlFor="delAfterRun">{t("cron.deleteAfterRun")}</Label>
             </div>
           )}
         </div>
@@ -410,7 +410,7 @@ function JobsTab({
                   )}
                 >
                   <TableCell className="font-medium">{j.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{scheduleLabel(j.schedule)}</TableCell>
+                  <TableCell className="font-mono text-xs">{scheduleLabel(j.schedule, t)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {cat === "active"
                       ? fmtMs(j.state.next_run_at_ms)

@@ -1,15 +1,17 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuthStore } from "./stores/authStore";
 import AppLayout from "./components/layout/AppLayout";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Chat from "./pages/Chat";
-import Channels from "./pages/Channels";
-import Tools from "./pages/Tools";
-import CronJobs from "./pages/CronJobs";
-import Settings from "./pages/Settings";
-import Users from "./pages/Users";
-import SystemConfig from "./pages/SystemConfig";
+
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Chat = lazy(() => import("./pages/Chat"));
+const Channels = lazy(() => import("./pages/Channels"));
+const Tools = lazy(() => import("./pages/Tools"));
+const CronJobs = lazy(() => import("./pages/CronJobs"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Users = lazy(() => import("./pages/Users"));
+const SystemConfig = lazy(() => import("./pages/SystemConfig"));
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -25,7 +27,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense fallback={null}>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route
         path="/"
@@ -102,5 +105,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
   );
 }

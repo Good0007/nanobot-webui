@@ -30,6 +30,7 @@
     "password": "Password",
     "loginButton": "Sign In",
     "loginFailed": "Invalid username or password",
+    "fieldRequired": "Please enter your username and password",
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "newPassword": "New Password",
@@ -92,12 +93,15 @@
     "modelsEmpty": "No models added. Add models to enable quick selection when switching providers.",
     "modelsPlaceholder": "Enter model name, e.g. gpt-4o",
     "modelsAdd": "Add",
-    "modelsRequired": "Please add at least one model name"
+    "modelsRequired": "Please add at least one model name",
+    "apiKeyPlaceholder": "Enter API Key",
+    "apiKeyRequired": "API Key is required"
   },
   "channels": {
     "title": "Channels",
     "name": "Channel",
     "names": {
+      "weixin": "WeChat",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
       "discord": "Discord",
@@ -109,6 +113,18 @@
       "matrix": "Matrix",
       "mochat": "WeCom (MoChat)",
       "web": "Web"
+    },
+    "weixin": {
+      "qrLogin": "Scan QR Code",
+      "relogin": "Re-login",
+      "loggedIn": "Logged in",
+      "notLoggedIn": "Not logged in",
+      "waitScan": "Scan the QR code with WeChat",
+      "scaned": "Scanned — please confirm on your phone",
+      "confirmed": "Login successful!",
+      "expired": "QR code expired, please refresh",
+      "loginFailed": "Login failed, please try again",
+      "startFailed": "Failed to get QR code, check your network"
     },
     "status": "Status",    "enabled": "Enabled",
     "disabled": "Disabled",    "running": "Running",
@@ -171,14 +187,6 @@
     "mustComplete": "Please complete the setup to continue",
     "agentConfigRequired": "Please select provider and enter model name",
     "setupComplete": "Setup complete! Welcome to Nanobot"
-  },
-  "providers": {
-    "configured": "Configured",
-    "notConfigured": "Not Configured",
-    "apiKey": "API Key",
-    "apiKeyPlaceholder": "Enter API Key",
-    "apiKeyRequired": "API Key is required",
-    "apiBase": "API Base URL"
   },
   "mcp": {
     "title": "MCP Servers",
@@ -293,7 +301,22 @@
     "toolCallResult": "Tool Result",
     "historyTasks": "Expired / Disabled Tasks",
     "expired": "Expired",
-    "showDisabled": "Show Disabled"
+    "showDisabled": "Show Disabled",
+    "kindCron": "Cron Expression",
+    "kindEvery": "Interval (every N)",
+    "kindAt": "One-time (at)",
+    "kindCronLabel": "Cron Expression",
+    "kindCronFormat": "Format: minute hour day month weekday (e.g. \"*/5 * * * *\" = every 5 min)",
+    "timezone": "Timezone (optional)",
+    "intervalMinutes": "Interval (minutes)",
+    "runAt": "Run at",
+    "deliverToChannel": "Deliver to channel",
+    "channel": "Channel",
+    "to": "To",
+    "deleteAfterRun": "Delete after run",
+    "everySeconds": "Every {{n}}s",
+    "everyMinutes": "Every {{n}}min",
+    "everyHours": "Every {{n}}h"
   },
   "settings": {
     "title": "Agent Settings",
@@ -408,6 +431,10 @@
     "chinese": "中文",
     "english": "English",
     "japanese": "日本語",
+    "traditionalChinese": "繁體中文",
+    "korean": "한국어",
+    "german": "Deutsch",
+    "french": "Français",
     "optional": "Optional",
     "dismiss": "Dismiss"
   },

@@ -90,5 +90,60 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            // Markdown rendering pipeline (heaviest: rehype-highlight loads highlight.js)
+            if (
+              id.includes("react-markdown") ||
+              id.includes("rehype-highlight") ||
+              id.includes("rehype-raw") ||
+              id.includes("rehype-") ||
+              id.includes("remark-") ||
+              id.includes("unified") ||
+              id.includes("micromark") ||
+              id.includes("mdast") ||
+              id.includes("hast") ||
+              id.includes("hast-util") ||
+              id.includes("unist") ||
+              id.includes("vfile") ||
+              id.includes("highlight.js")
+            ) {
+              return "vendor-markdown";
+            }
+            // Radix UI primitives
+            if (id.includes("@radix-ui")) {
+              return "vendor-radix";
+            }
+            // Icons
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+            // i18n ecosystem
+            if (
+              id.includes("i18next") ||
+              id.includes("react-i18next")
+            ) {
+              return "vendor-i18n";
+            }
+            // React core + router
+            if (
+              id.includes("node_modules/react/") ||
+              id.includes("node_modules/react-dom/") ||
+              id.includes("node_modules/react-router") ||
+              id.includes("node_modules/scheduler/")
+            ) {
+              return "vendor-react";
+            }
+            // Data fetching
+            if (id.includes("@tanstack")) {
+              return "vendor-query";
+            }
+            // Other node_modules: let Rollup decide chunking automatically
+          }
+        },
+      },
+    },
   },
 });
