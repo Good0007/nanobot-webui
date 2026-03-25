@@ -288,7 +288,7 @@ function JobsTab({
   const [mode, setMode] = useState<"create" | "edit" | null>(null);
   const [editTarget, setEditTarget] = useState<CronJob | null>(null);
   const [delTarget, setDelTarget] = useState<string | null>(null);
-  const [showDisabled, setShowDisabled] = useState(false);
+  const [showDisabled, setShowDisabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   const now = Date.now();
@@ -541,6 +541,9 @@ function roleBgClass(role: string) {
   }
 }
 
+/** Characters shown per "page" when content is long */
+const CONTENT_PAGE_SIZE = 2000;
+
 function MessageBubble({ msg, t }: { msg: CronSessionMessage; t: (k: string) => string }) {
   const contentStr =
     typeof msg.content === "string"
@@ -548,6 +551,12 @@ function MessageBubble({ msg, t }: { msg: CronSessionMessage; t: (k: string) => 
       : msg.content != null
         ? JSON.stringify(msg.content, null, 2)
         : null;
+
+  // Paginated expand: start by showing the first page, expand on demand
+  const [visibleChars, setVisibleChars] = useState(CONTENT_PAGE_SIZE);
+  const totalLen = contentStr?.length ?? 0;
+  const isLong = totalLen > CONTENT_PAGE_SIZE;
+  const isFullyExpanded = visibleChars >= totalLen;
 
   const roleLabel =
     msg.role === "user"
@@ -607,7 +616,43 @@ function MessageBubble({ msg, t }: { msg: CronSessionMessage; t: (k: string) => 
 
       {contentStr && (
         <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-          {contentStr.length > 2000 ? contentStr.slice(0, 2000) + "…" : contentStr}
+          {isFullyExpanded ? contentStr : contentStr.slice(0, visibleChars) + "…"}
+        </div>
+      )}
+
+      {/* Expand / collapse controls for long content */}
+      {isLong && (
+        <div className="flex items-center gap-2 mt-1.5">
+          {!isFullyExpanded && (
+            <>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline cursor-pointer"
+                onClick={() => setVisibleChars((v) => Math.min(v + CONTENT_PAGE_SIZE, totalLen))}
+              >
+                Show more (+{Math.min(CONTENT_PAGE_SIZE, totalLen - visibleChars).toLocaleString()} chars)
+              </button>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline cursor-pointer"
+                onClick={() => setVisibleChars(totalLen)}
+              >
+                Show all ({totalLen.toLocaleString()} chars)
+              </button>
+            </>
+          )}
+          {visibleChars > CONTENT_PAGE_SIZE && (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline cursor-pointer"
+              onClick={() => setVisibleChars(CONTENT_PAGE_SIZE)}
+            >
+              Collapse
+            </button>
+          )}
+          <span className="text-[10px] text-muted-foreground ml-auto">
+            {Math.min(visibleChars, totalLen).toLocaleString()} / {totalLen.toLocaleString()}
+          </span>
         </div>
       )}
     </div>
@@ -672,7 +717,7 @@ function SessionDetail({
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
         </div>
       ) : messages && messages.length > 0 ? (
-        <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
+        <div className="space-y-2 flex-1 overflow-y-auto pr-1" tabIndex={0}>
           {messages.map((m, i) => (
             <MessageBubble key={i} msg={m} t={t} />
           ))}
@@ -721,8 +766,21 @@ function HistoryTab({
       const tail = rest.slice(lastColon + 1);
       if (/^\d+$/.test(tail)) {
         const jobPart = rest.slice(0, lastColon);
-        const ts = parseInt(tail, 10);
-        return { jobId: jobPart, executedAt: new Date(ts).toLocaleString() };
+        // The timestamp may be nanoseconds (19 digits), microseconds (16),
+        // or milliseconds (13).  Normalise to milliseconds for Date().
+        let ms: number;
+        if (tail.length >= 18) {
+          // nanoseconds → divide by 1_000_000 using BigInt to avoid precision loss
+          ms = Number(BigInt(tail) / BigInt(1_000_000));
+        } else if (tail.length >= 15) {
+          // microseconds
+          ms = Number(BigInt(tail) / BigInt(1_000));
+        } else {
+          ms = parseInt(tail, 10);
+        }
+        const d = new Date(ms);
+        const display = isNaN(d.getTime()) ? null : d.toLocaleString();
+        return { jobId: jobPart, executedAt: display };
       }
     }
     return { jobId: rest, executedAt: null };
