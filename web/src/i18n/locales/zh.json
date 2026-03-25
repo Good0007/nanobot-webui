@@ -95,7 +95,14 @@
     "modelsAdd": "添加",
     "modelsRequired": "请至少添加一个模型名称",
     "apiKeyPlaceholder": "输入 API Key",
-    "apiKeyRequired": "API Key 为必填项"
+    "apiKeyRequired": "API Key 为必填项",
+    "addCustom": "添加自定义提供商",
+    "customName": "提供商名称",
+    "delete": "删除",
+    "deleteConfirm": "确定要删除此自定义提供商吗？",
+    "created": "提供商已创建",
+    "deleted": "提供商已删除",
+    "nameRequired": "请输入名称"
   },
   "channels": {
     "title": "通道",

@@ -12,6 +12,7 @@ export interface ProviderInfo {
   // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
   models: string[];
   // [AI:END]
+  is_custom: boolean;
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -23,12 +24,16 @@ const PROVIDER_LABELS: Record<string, string> = {
   zhipu: "Zhipu AI",
   dashscope: "DashScope (Alibaba)",
   vllm: "vLLM",
+  ollama: "Ollama",
   gemini: "Google Gemini",
   moonshot: "Moonshot",
   minimax: "MiniMax",
   aihubmix: "AiHubMix",
   siliconflow: "SiliconFlow",
   volcengine: "VolcEngine",
+  volcengine_coding_plan: "VolcEngine Coding Plan",
+  byteplus: "BytePlus",
+  byteplus_coding_plan: "BytePlus Coding Plan",
   azure_openai: "Azure OpenAI",
   custom: "Custom",
   openai_codex: "OpenAI Codex",
@@ -43,11 +48,15 @@ const PROVIDER_DEFAULT_BASE_URLS: Record<string, string> = {
   groq: "https://api.groq.com/openai/v1",
   zhipu: "https://open.bigmodel.cn/api/paas/v4",
   dashscope: "https://dashscope.aliyuncs.com/api/v1",
+  ollama: "http://localhost:11434",
   gemini: "https://generativelanguage.googleapis.com/v1beta",
   moonshot: "https://api.moonshot.cn/v1",
   minimax: "https://api.minimax.chat/v1",
   siliconflow: "https://api.siliconflow.cn/v1",
   volcengine: "https://ark.cn-beijing.volces.com/api/v3",
+  volcengine_coding_plan: "https://ark.cn-beijing.volces.com/api/coding/v3",
+  byteplus: "https://ark.ap-southeast.bytepluses.com/api/v3",
+  byteplus_coding_plan: "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
   azure_openai: "https://<your-resource-name>.openai.azure.com",
 };
 
@@ -89,6 +98,32 @@ export function useUpdateProvider() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["providers"] });
       toast.success(i18n.t("providers.saved"));
+    },
+  });
+}
+
+export function useCreateProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; api_key?: string; api_base?: string; extra_headers?: Record<string, string>; models?: string[] }) =>
+      api.post("/providers", data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["providers"] });
+      toast.success(i18n.t("providers.created"));
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.detail || err.message || "Failed to create provider");
+    }
+  });
+}
+
+export function useDeleteProvider() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.delete(`/providers/${name}`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["providers"] });
+      toast.success(i18n.t("providers.deleted"));
     },
   });
 }

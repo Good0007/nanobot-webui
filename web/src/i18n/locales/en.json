@@ -95,7 +95,14 @@
     "modelsAdd": "Add",
     "modelsRequired": "Please add at least one model name",
     "apiKeyPlaceholder": "Enter API Key",
-    "apiKeyRequired": "API Key is required"
+    "apiKeyRequired": "API Key is required",
+    "addCustom": "Add Custom Provider",
+    "customName": "Provider Name",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this custom provider?",
+    "created": "Provider created",
+    "deleted": "Provider deleted",
+    "nameRequired": "Name is required"
   },
   "channels": {
     "title": "Channels",

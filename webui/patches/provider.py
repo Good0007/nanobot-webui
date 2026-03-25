@@ -10,6 +10,85 @@ from __future__ import annotations
 import tempfile
 
 
+def make_provider_patched(config):
+    """
+    Replicate and patch nanobot's _make_provider logic.
+    - Adds support for custom providers from webui_config.json
+    - Fixes extra_headers and is_local omissions in older nanobot versions.
+    """
+    import sys
+    from nanobot.providers.registry import find_by_name
+    from webui.utils.webui_config import get_custom_providers
+
+    model: str = config.agents.defaults.model
+    provider_name: str = config.get_provider_name(model)
+    p = config.get_provider(model)
+
+    # 1. Custom dynamically injected providers OR the built-in "custom" provider
+    custom_providers = get_custom_providers()
+    is_custom_dynamic = provider_name and provider_name in custom_providers
+    
+    if provider_name == "custom" or is_custom_dynamic:
+        from nanobot.providers.custom_provider import CustomProvider
+        import inspect
+        has_eh = "extra_headers" in inspect.signature(CustomProvider.__init__).parameters
+        
+        if has_eh:
+            kwargs = {"extra_headers": p.extra_headers if p else None}
+            return CustomProvider(
+                api_key=p.api_key if p else "no-key",
+                api_base=config.get_api_base(model) or "http://localhost:8000/v1",
+                default_model=model,
+                **kwargs,
+            )
+        else:
+            prov = CustomProvider(
+                api_key=p.api_key if p else "no-key",
+                api_base=config.get_api_base(model) or "http://localhost:8000/v1",
+                default_model=model,
+            )
+            if hasattr(p, "extra_headers") and p.extra_headers and hasattr(prov, "_client"):
+                # Avoid double AsyncOpenAI client instantiation by merging headers directly
+                prov._client._custom_headers = {**(prov._client._custom_headers or {}), **p.extra_headers}
+            return prov
+
+    if provider_name == "openai_codex" or model.startswith("openai-codex/"):
+        from nanobot.providers.openai_codex_provider import OpenAICodexProvider
+        return OpenAICodexProvider(default_model=model)
+
+    if provider_name == "azure_openai":
+        from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
+        if not p or not p.api_key or not p.api_base:
+            print(
+                "Warning: Azure OpenAI requires api_key and api_base. "
+                "Set them in Settings → Providers.",
+                file=sys.stderr,
+            )
+        else:
+            return AzureOpenAIProvider(
+                api_key=p.api_key,
+                api_base=p.api_base,
+                default_model=model,
+            )
+
+    from nanobot.providers.litellm_provider import LiteLLMProvider
+    spec = find_by_name(provider_name)
+    if not model.startswith("bedrock/") and not (p and p.api_key) and not (spec and (spec.is_oauth or spec.is_local)):
+        print(
+            "Warning: No API key configured. "
+            "Start the WebUI and set one in Settings → Providers.",
+            file=sys.stderr,
+        )
+
+    return LiteLLMProvider(
+        api_key=p.api_key if p else None,
+        api_base=config.get_api_base(model),
+        default_model=model,
+        extra_headers=p.extra_headers if p else None,
+        provider_name=provider_name,
+    )
+
+
 def apply() -> None:
     import json
     import uuid
@@ -226,3 +305,10 @@ def apply() -> None:
 
     CustomProvider.chat = _make_patched_chat(CustomProvider.chat)    # type: ignore[method-assign]
     LiteLLMProvider.chat = _make_patched_chat(LiteLLMProvider.chat)  # type: ignore[method-assign]
+
+    # Patch nanobot CLI's _make_provider so CLI commands use our patched factory
+    try:
+        import nanobot.cli.commands as _commands
+        _commands._make_provider = make_provider_patched
+    except Exception:
+        pass

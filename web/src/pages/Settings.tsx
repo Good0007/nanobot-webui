@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronDown, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, X, Plus, Trash2 } from "lucide-react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
@@ -21,6 +21,8 @@ import { isMasked } from "../lib/utils";
 import {
   useProviders,
   useUpdateProvider,
+  useCreateProvider,
+  useDeleteProvider,
   getProviderLabel,
   getProviderDefaultBaseUrl,
   type ProviderInfo
@@ -35,8 +37,9 @@ import {
 
 const PROVIDER_ICONS: Record<string, string> = {
   anthropic: "🟠", openai: "🟢", openrouter: "🔵", deepseek: "🐋",
-  volcengine: "🌋", groq: "⚡", zhipu: "🧠", dashscope: "☁️",
-  vllm: "🖥️", gemini: "💎", moonshot: "🌙", minimax: "🔮",
+  volcengine: "🌋", volcengine_coding_plan: "🌋", byteplus: "🟣", byteplus_coding_plan: "🟣",
+  groq: "⚡", zhipu: "🧠", dashscope: "☁️",
+  vllm: "🖥️", ollama: "🦙", gemini: "💎", moonshot: "🌙", minimax: "🔮",
   aihubmix: "🎛️", siliconflow: "💧", azure_openai: "🪟", custom: "⚙️",
 };
 
@@ -113,11 +116,16 @@ function ProvidersTab() {
   const { t } = useTranslation();
   const { data: providers, isLoading } = useProviders();
   const update = useUpdateProvider();
+  const create = useCreateProvider();
+  const remove = useDeleteProvider();
   const [drafts, setDrafts] = useState<Record<string, ProviderDraft>>({});
   // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
   const [modelsDrafts, setModelsDrafts] = useState<Record<string, string[] | undefined>>({});
   // [AI:END]
   const [expanded, setExpanded] = useState<string[]>([]);
+  
+  // Custom provider creation state
+  const [newProviderName, setNewProviderName] = useState("");
 
   const toggleExpand = (name: string) =>
     setExpanded((p) => p.includes(name) ? p.filter((n) => n !== name) : [...p, name]);
@@ -163,13 +171,34 @@ function ProvidersTab() {
     });
   };
 
+  const handleCreateCustom = () => {
+    if (!newProviderName.trim()) {
+      toast.error(t("providers.nameRequired"));
+      return;
+    }
+    create.mutate({ name: newProviderName.trim() }, {
+      onSuccess: () => {
+        setNewProviderName("");
+        setExpanded((p) => [...p, newProviderName.trim()]);
+      }
+    });
+  };
+
+  const handleDeleteCustom = (name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm(t("providers.deleteConfirm"))) {
+      remove.mutate(name);
+    }
+  };
+
   if (isLoading) return <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>;
 
   return (
-    <div className="space-y-2">
-      {providers?.map((p) => {
-        const isExpand = expanded.includes(p.name);
-        const apiKey = getDraft(p.name, "api_key", p.api_key_masked);
+    <div className="space-y-4">
+      <div className="space-y-2">
+        {providers?.map((p) => {
+          const isExpand = expanded.includes(p.name);
+          const apiKey = getDraft(p.name, "api_key", p.api_key_masked);
         const apiBase = getDraft(p.name, "api_base", p.api_base ?? "");
         const extraHeaders = getDraft(p.name, "extra_headers",
           p.extra_headers ? JSON.stringify(p.extra_headers, null, 2) : "");
@@ -189,6 +218,17 @@ function ProvidersTab() {
                 <Badge variant={p.has_key ? "default" : "secondary"} className="shrink-0">
                   {p.has_key ? t("providers.configured") : t("providers.notConfigured")}
                 </Badge>
+                {p.is_custom && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-destructive shrink-0" 
+                    onClick={(e) => handleDeleteCustom(p.name, e)}
+                    title={t("providers.delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 {isExpand
                   ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -236,6 +276,25 @@ function ProvidersTab() {
           </Card>
         );
       })}
+      </div>
+      <div className="flex items-center gap-2 pt-2 border-t">
+        <Input 
+          value={newProviderName} 
+          onChange={(e) => setNewProviderName(e.target.value)} 
+          placeholder={t("providers.customName")} 
+          className="max-w-[200px]"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleCreateCustom();
+            }
+          }}
+        />
+        <Button size="sm" variant="secondary" onClick={handleCreateCustom} disabled={create.isPending}>
+          <Plus className="h-4 w-4 mr-1" />
+          {t("providers.addCustom")}
+        </Button>
+      </div>
     </div>
   );
 }

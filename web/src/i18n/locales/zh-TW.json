@@ -95,7 +95,14 @@
     "modelsAdd": "新增",
     "modelsRequired": "請至少新增一個模型名稱",
     "apiKeyPlaceholder": "請輸入 API 金鑰",
-    "apiKeyRequired": "API 金鑰為必填項"
+    "apiKeyRequired": "API 金鑰為必填項",
+    "addCustom": "新增自訂供應商",
+    "customName": "供應商名稱",
+    "delete": "刪除",
+    "deleteConfirm": "確定要刪除此自訂供應商嗎？",
+    "created": "供應商已建立",
+    "deleted": "供應商已刪除",
+    "nameRequired": "請輸入名稱"
   },
   "channels": {
     "title": "頻道",

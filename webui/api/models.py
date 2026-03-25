@@ -143,7 +143,14 @@ class ProviderInfo(BaseModel):
     # [AI:START] tool=copilot date=2026-03-12 author=chenweikang
     models: list[str] = Field(default_factory=list)  # User-defined model list
     # [AI:END]
+    is_custom: bool = False  # True if it's dynamically added via webui_config
 
+class CreateProviderRequest(BaseModel):
+    name: str
+    api_key: str | None = None
+    api_base: str | None = None
+    extra_headers: dict[str, str] | None = None
+    models: list[str] | None = None
 
 class UpdateProviderRequest(BaseModel):
     api_key: str | None = None  # empty string clears the key

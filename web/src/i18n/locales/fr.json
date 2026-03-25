@@ -95,7 +95,14 @@
     "modelsAdd": "Ajouter",
     "modelsRequired": "Veuillez ajouter au moins un nom de modèle",
     "apiKeyPlaceholder": "Entrez la clé API",
-    "apiKeyRequired": "La clé API est obligatoire"
+    "apiKeyRequired": "La clé API est obligatoire",
+    "addCustom": "Ajouter un fournisseur personnalisé",
+    "customName": "Nom du fournisseur",
+    "delete": "Supprimer",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce fournisseur personnalisé ?",
+    "created": "Fournisseur créé",
+    "deleted": "Fournisseur supprimé",
+    "nameRequired": "Le nom est requis"
   },
   "channels": {
     "title": "Canaux",

@@ -95,7 +95,14 @@
     "modelsAdd": "Hinzufügen",
     "modelsRequired": "Bitte mindestens einen Modellnamen hinzufügen",
     "apiKeyPlaceholder": "API-Schlüssel eingeben",
-    "apiKeyRequired": "API-Schlüssel ist erforderlich"
+    "apiKeyRequired": "API-Schlüssel ist erforderlich",
+    "addCustom": "Benutzerdefinierten Anbieter hinzufügen",
+    "customName": "Anbietername",
+    "delete": "Löschen",
+    "deleteConfirm": "Möchten Sie diesen benutzerdefinierten Anbieter wirklich löschen?",
+    "created": "Anbieter erstellt",
+    "deleted": "Anbieter gelöscht",
+    "nameRequired": "Name ist erforderlich"
   },
   "channels": {
     "title": "Kanäle",

@@ -95,7 +95,14 @@
     "modelsAdd": "추가",
     "modelsRequired": "최소 하나의 모델 이름을 추가해 주세요",
     "apiKeyPlaceholder": "API 키를 입력하세요",
-    "apiKeyRequired": "API 키는 필수입니다"
+    "apiKeyRequired": "API 키는 필수입니다",
+    "addCustom": "사용자 지정 제공자 추가",
+    "customName": "제공자 이름",
+    "delete": "삭제",
+    "deleteConfirm": "이 사용자 지정 제공자를 삭제하시겠습니까?",
+    "created": "제공자가 생성되었습니다",
+    "deleted": "제공자가 삭제되었습니다",
+    "nameRequired": "이름을 입력해야 합니다"
   },
   "channels": {
     "title": "채널",

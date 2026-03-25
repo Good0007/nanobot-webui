@@ -26,61 +26,6 @@ def _apply_patches() -> None:
 
 _apply_patches()
 
-
-
-def _make_provider(config):
-    """Replicate nanobot's _make_provider logic without importing the private helper."""
-    from nanobot.providers.registry import find_by_name
-
-    model: str = config.agents.defaults.model
-    provider_name: str = config.get_provider_name(model)
-    p = config.get_provider(model)
-
-    if provider_name == "openai_codex" or model.startswith("openai-codex/"):
-        from nanobot.providers.openai_codex_provider import OpenAICodexProvider
-        return OpenAICodexProvider(default_model=model)
-
-    if provider_name == "custom":
-        from nanobot.providers.custom_provider import CustomProvider
-        return CustomProvider(
-            api_key=p.api_key if p else "no-key",
-            api_base=config.get_api_base(model) or "http://localhost:8000/v1",
-            default_model=model,
-        )
-
-    if provider_name == "azure_openai":
-        from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
-        if not p or not p.api_key or not p.api_base:
-            print(
-                "Warning: Azure OpenAI requires api_key and api_base. "
-                "Set them in Settings → Providers.",
-                file=sys.stderr,
-            )
-        else:
-            return AzureOpenAIProvider(
-                api_key=p.api_key,
-                api_base=p.api_base,
-                default_model=model,
-            )
-
-    from nanobot.providers.litellm_provider import LiteLLMProvider
-    spec = find_by_name(provider_name)
-    if not model.startswith("bedrock/") and not (p and p.api_key) and not (spec and spec.is_oauth):
-        print(
-            "Warning: No API key configured. "
-            "Start the WebUI and set one in Settings → Providers.",
-            file=sys.stderr,
-        )
-
-    return LiteLLMProvider(
-        api_key=p.api_key if p else None,
-        api_base=config.get_api_base(model),
-        default_model=model,
-        extra_headers=p.extra_headers if p else None,
-        provider_name=provider_name,
-    )
-
-
 async def main(
     web_port: int = 18780,
     web_host: str = "0.0.0.0",
@@ -106,6 +51,7 @@ async def main(
 
     from webui.api.channel_ext import ExtendedChannelManager
     from webui.api.gateway import ServiceContainer, start_api_server
+    from webui.patches.provider import make_provider_patched
 
     config = load_config()
     if workspace:
@@ -113,7 +59,7 @@ async def main(
     sync_workspace_templates(config.workspace_path)
 
     bus = MessageBus()
-    provider = _make_provider(config)
+    provider = make_provider_patched(config)
     from nanobot.providers.base import GenerationSettings
     provider.generation = GenerationSettings(
         temperature=config.agents.defaults.temperature,
@@ -237,7 +183,7 @@ async def main(
         session_manager=session_manager,
         cron=cron,
         heartbeat=heartbeat,
-        make_provider=_make_provider,
+        make_provider=make_provider_patched,
     )
 
     if channels.enabled_channels:

@@ -27,7 +27,10 @@ Top-level schema (all sections optional, defaults shown):
         "provider_meta": {},
 
         // Users (bcrypt-hashed passwords)
-        "users": []
+        "users": [],
+
+        // Custom Providers (user-defined custom OpenAI-compatible providers)
+        "custom_providers": {}
     }
 
 Usage
@@ -40,6 +43,7 @@ Usage
     cfg.get_s3()
     cfg.get_provider_models("openai")
     cfg.get_users()
+    cfg.get_custom_providers()
 
     # write
     cfg.set_disabled_skills({"weather"})
@@ -47,6 +51,7 @@ Usage
     cfg.set_s3({...})
     cfg.set_provider_models("openai", ["gpt-4o"])
     cfg.save_users([...])
+    cfg.set_custom_provider("my_openai", {"api_key": "sk-...", "api_base": "..."})
 
 Thread-safety: relies on Python's GIL for simple dict updates and atomic
 ``replace()`` for file writes (POSIX-atomic, best-effort on Windows).
@@ -250,3 +255,33 @@ def save_users(users: list[dict[str, Any]]) -> None:
     state = load()
     state["users"] = users
     save(state)
+
+
+# ---------------------------------------------------------------------------
+# Custom Providers
+# ---------------------------------------------------------------------------
+
+def get_custom_providers() -> dict[str, dict]:
+    """Return all custom providers. Format: { name: { api_key: str, api_base: str, extra_headers: dict } }."""
+    return load().get("custom_providers", {})
+
+
+def set_custom_provider(name: str, config_dict: dict) -> None:
+    """Add or update a custom provider."""
+    state = load()
+    providers: dict = state.get("custom_providers", {})
+    providers[name] = config_dict
+    state["custom_providers"] = providers
+    save(state)
+
+
+def delete_custom_provider(name: str) -> bool:
+    """Delete a custom provider. Returns True if deleted, False if not found."""
+    state = load()
+    providers: dict = state.get("custom_providers", {})
+    if name in providers:
+        del providers[name]
+        state["custom_providers"] = providers
+        save(state)
+        return True
+    return False

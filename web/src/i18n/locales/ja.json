@@ -95,7 +95,14 @@
     "modelsEmpty": "モデルが追加されていません。プロバイダー切り替え時の簡単選択のためにモデルを追加してください。",
     "modelsPlaceholder": "モデル名を入力、例： gpt-4o",
     "modelsAdd": "追加",
-    "modelsRequired": "少なくとも 1 つのモデル名を追加してください"
+    "modelsRequired": "少なくとも 1 つのモデル名を追加してください",
+    "addCustom": "カスタムプロバイダーを追加",
+    "customName": "プロバイダー名",
+    "delete": "削除",
+    "deleteConfirm": "このカスタムプロバイダーを削除してもよろしいですか？",
+    "created": "プロバイダーを作成しました",
+    "deleted": "プロバイダーを削除しました",
+    "nameRequired": "名前は必須です"
   },
   "channels": {
     "title": "チャンネル",
