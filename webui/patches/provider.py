@@ -1,6 +1,6 @@
 """[Provider] patches — transparently support newer OpenAI API formats.
 
-Patch 4: CustomProvider.chat + LiteLLMProvider.chat
+Patch: OpenAICompatProvider.chat (nightly) / CustomProvider + LiteLLMProvider (legacy)
     On the first call that returns an "unsupported legacy protocol" error the
     provider is transparently switched to /v1/responses.
     The decision is cached per api_base so subsequent calls skip the trial.
@@ -95,8 +95,29 @@ def apply() -> None:
 
     import httpx
     from nanobot.providers.base import LLMResponse, ToolCallRequest
-    from nanobot.providers.custom_provider import CustomProvider
-    from nanobot.providers.litellm_provider import LiteLLMProvider
+
+    # nightly uses OpenAICompatProvider; older versions use CustomProvider + LiteLLMProvider
+    _provider_classes: list[type] = []
+    try:
+        from nanobot.providers.openai_compat_provider import OpenAICompatProvider
+        _provider_classes.append(OpenAICompatProvider)
+    except ImportError:
+        pass
+    try:
+        from nanobot.providers.custom_provider import CustomProvider
+        _provider_classes.append(CustomProvider)
+    except ImportError:
+        pass
+    try:
+        from nanobot.providers.litellm_provider import LiteLLMProvider
+        _provider_classes.append(LiteLLMProvider)
+    except ImportError:
+        pass
+
+    if not _provider_classes:
+        from loguru import logger as _logger
+        _logger.warning("No provider classes found to patch")
+        return
 
     # Per-process cache: set of api_base strings confirmed to need Responses API.
     _responses_api_bases: set[str] = set()
@@ -303,8 +324,8 @@ def apply() -> None:
             return result
         return _patched_chat
 
-    CustomProvider.chat = _make_patched_chat(CustomProvider.chat)    # type: ignore[method-assign]
-    LiteLLMProvider.chat = _make_patched_chat(LiteLLMProvider.chat)  # type: ignore[method-assign]
+    for cls in _provider_classes:
+        cls.chat = _make_patched_chat(cls.chat)  # type: ignore[method-assign]
 
     # Patch nanobot CLI's _make_provider so CLI commands use our patched factory
     try:

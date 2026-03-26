@@ -13,7 +13,7 @@ Two patches are applied:
    • channel != "web"   → bus.publish_outbound(_progress=True, _tool_hint=True)
                           ChannelManager forwards to Telegram / DingTalk / etc.
 
-2. _announce (final SubAgent result):
+2. _announce_result (final SubAgent result):
    • channel == "web"   → _announce_registry[chat_key](result_text)
                           ws.py sends WS frame {type: "done", ...}  (new bubble)
                           *** skips bus.publish_inbound to avoid Unknown channel:web ***
@@ -157,7 +157,7 @@ def _extract_interaction_log(messages: list) -> str:
                         recipient = args.get("recipient", "?")
                         entries.append(f"📤 发送给 {recipient}: {msg_content}")
                     except Exception:
-                        entries.append(f"📤 发送消息 (解析失败)")
+                        entries.append("📤 发送消息 (解析失败)")
 
     if not entries:
         return ""
@@ -166,25 +166,37 @@ def _extract_interaction_log(messages: list) -> str:
 
 
 def apply() -> None:
-    """Monkey-patch SubagentManager._run_subagent to emit progress events."""
+    """Monkey-patch SubagentManager to emit progress events.
+
+    Targets nanobot nightly (≥ 0.1.5) which has:
+    - ``_announce_result`` (not ``_announce``)
+    - ``_run_subagent(self, task_id, task, label, origin)``
+    - ``_build_subagent_prompt(self)`` (no args)
+    - ``SpawnTool.set_context(channel, chat_id)`` (no session_key)
+    """
     from nanobot.agent.subagent import SubagentManager
     from nanobot.bus.events import OutboundMessage
 
+    _original_announce_result = SubagentManager._announce_result
+
+    # -----------------------------------------------------------------------
+    # Patch 1: _run_subagent — add progress tracking + WebUI progress push
+    # -----------------------------------------------------------------------
     async def _run_subagent_patched(
         self: SubagentManager,
         task_id: str,
         task: str,
         label: str,
         origin: dict[str, str],
-        *,
-        model_override: str | None = None,
-        allowed_tools: list[str] | None = None,
-        extra_prompt: str = "",
-        max_iterations: int = 30,
     ) -> None:
         """Augmented _run_subagent: progress tracking + WebUI progress push per tool call."""
         import asyncio
-        import time
+
+        from nanobot.agent.skills import BUILTIN_SKILLS_DIR
+        from nanobot.agent.tools.filesystem import EditFileTool, ListDirTool, ReadFileTool, WriteFileTool
+        from nanobot.agent.tools.registry import ToolRegistry
+        from nanobot.agent.tools.shell import ExecTool
+        from nanobot.agent.tools.web import WebFetchTool, WebSearchTool
         from nanobot.utils.helpers import build_assistant_message
 
         channel = origin.get("channel", "")
@@ -194,11 +206,6 @@ def apply() -> None:
         # chat_key ("cli:direct").  Use origin["session_key"] when available so
         # sub-agent messages are persisted under the correct session.
         save_session_key = origin.get("session_key") or chat_key
-
-        # Get or create progress tracker (safe: old instances may lack _progress)
-        if not hasattr(self, '_progress'):
-            self._progress = {}
-        progress = self._progress.get(task_id)
 
         async def _emit_progress(hint: str) -> None:
             """Push a tool-hint progress event via the appropriate path."""
@@ -224,33 +231,35 @@ def apply() -> None:
         logger.info("Subagent [{}] starting task: {}", task_id, label)
 
         try:
-            tools = self._build_tools(task_id, allowed_tools)
-            system_prompt = self._build_subagent_prompt(task_id, extra_prompt, label=label)
+            # Build tools — mirrors nightly _run_subagent exactly
+            tools = ToolRegistry()
+            allowed_dir = self.workspace if self.restrict_to_workspace else None
+            extra_read = [BUILTIN_SKILLS_DIR] if allowed_dir else None
+            tools.register(ReadFileTool(workspace=self.workspace, allowed_dir=allowed_dir, extra_allowed_dirs=extra_read))
+            tools.register(WriteFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(EditFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(ListDirTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(ExecTool(
+                working_dir=str(self.workspace),
+                timeout=self.exec_config.timeout,
+                restrict_to_workspace=self.restrict_to_workspace,
+                path_append=self.exec_config.path_append,
+            ))
+            tools.register(WebSearchTool(config=self.web_search_config, proxy=self.web_proxy))
+            tools.register(WebFetchTool(proxy=self.web_proxy))
+
+            system_prompt = self._build_subagent_prompt()
             messages: list[dict[str, Any]] = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": task},
             ]
 
-            model = model_override or self.model
-            # Resolve the best provider for this model (may differ from self.provider)
-            provider = self._resolve_provider(model)
+            model = self.model
+            provider = self.provider
             final_result: str | None = None
+            max_iterations = 15
 
             for iteration in range(1, max_iterations + 1):
-                # Update progress: new iteration
-                if progress:
-                    progress.iteration = iteration
-                    progress.status = "thinking"
-                    progress.current_tool = ""
-                    progress.updated_at = time.time()
-
-                # Inject mailbox messages and notify parent about incoming
-                for m in self._mailbox.pop(task_id, []):
-                    msg_content = f"[Message from agent {m['from']}]: {m['content']}"
-                    messages.append({"role": "user", "content": msg_content})
-                    # Push interaction notification to parent channel
-                    await _emit_progress(f"📨 收到来自 agent {m['from']} 的消息: {m['content'][:80]}")
-
                 response = await provider.chat_with_retry(
                     messages=messages,
                     tools=tools.get_definitions(),
@@ -258,16 +267,6 @@ def apply() -> None:
                 )
 
                 if response.has_tool_calls:
-                    # Update progress: tool execution
-                    tool_names = [tc.name for tc in response.tool_calls]
-                    if progress:
-                        progress.status = "tool_call"
-                        progress.current_tool = ", ".join(tool_names)
-                        progress.tools_used.extend(tool_names)
-                        if response.content:
-                            progress.last_thought = response.content[:200]
-                        progress.updated_at = time.time()
-
                     # Emit progress hint to WebUI / channel
                     def _tool_hint(tool_calls: list) -> str:
                         def _fmt(tc: Any) -> str:
@@ -287,20 +286,18 @@ def apply() -> None:
                         thinking_blocks=response.thinking_blocks,
                     ))
 
-                    # Parallel tool execution (same as core _run_subagent)
-                    results = await asyncio.gather(*(
-                        tools.execute(tc.name, tc.arguments)
-                        for tc in response.tool_calls
-                    ), return_exceptions=True)
-                    for tc, result in zip(response.tool_calls, results):
-                        if isinstance(result, BaseException):
-                            result = f"Error: {type(result).__name__}: {result}"
+                    # Execute tools (sequential, matching nightly)
+                    for tc in response.tool_calls:
+                        try:
+                            result = await tools.execute(tc.name, tc.arguments)
+                        except Exception as exc:
+                            result = f"Error: {type(exc).__name__}: {exc}"
                         messages.append({
                             "role": "tool", "tool_call_id": tc.id,
                             "name": tc.name, "content": result,
                         })
                         # Push send_to_agent interaction to parent channel
-                        if tc.name == "send_to_agent" and not isinstance(result, BaseException):
+                        if tc.name == "send_to_agent":
                             try:
                                 _args = tc.arguments
                                 if isinstance(_args, list):
@@ -310,38 +307,19 @@ def apply() -> None:
                                 await _emit_progress(f"📤 向 agent {_recip} 发送: {_msg[:80]}")
                             except Exception:
                                 pass
-
-                    # Periodic progress report to main agent
-                    report_interval = getattr(self, 'PROGRESS_REPORT_INTERVAL', 3)
-                    if progress and (iteration - progress.last_report_iteration) >= report_interval:
-                        progress.last_report_iteration = iteration
-                        if hasattr(self, '_report_progress'):
-                            await self._report_progress(task_id, label, progress, origin)
                 else:
                     final_result = response.content
                     break
 
             if final_result is None:
-                final_result = f"Reached max iterations ({max_iterations}) without final response."
+                final_result = "Task completed but no final response was generated."
 
-            # Append the final assistant message so _save_turn captures it in the chain.
+            # Append the final assistant message so _save_turn captures it.
             messages.append({"role": "assistant", "content": final_result})
 
-            # Update progress: completed
-            if progress:
-                progress.status = "completed"
-                progress.current_tool = ""
-                progress.updated_at = time.time()
-
             logger.info("Subagent [{}] completed successfully", task_id)
-            if hasattr(self, '_results'):
-                self._results[task_id] = final_result
-            if hasattr(self, '_done_events') and task_id in self._done_events:
-                self._done_events[task_id].set()
 
-            # Extract inter-agent communication log (send_to_agent calls
-            # and [Message from agent ...] received messages) so the user
-            # can see the full dialogue between agents.
+            # Extract inter-agent communication log
             interaction_log = _extract_interaction_log(messages)
 
             # Build enriched result that includes interaction log
@@ -349,7 +327,7 @@ def apply() -> None:
             if interaction_log:
                 enriched_result = f"{interaction_log}\n\n---\n\n**最终输出：**\n{enriched_result}"
 
-            # Persist to session
+            # Persist to session (web channel uses registered callback)
             if channel == "web":
                 save_cb = _save_turn_registry.get(chat_key)
                 if save_cb:
@@ -357,23 +335,13 @@ def apply() -> None:
                         await save_cb(messages)
                     except Exception:
                         pass
-            # Non-web: _announce → bus → _process_message → Patch 4 will
-            # save the announcement as role="sub_tool" with full Task+Result.
-            # Do NOT also call _save_sub_tool_to_session here — that would
-            # produce a duplicate sub_tool entry in the session.
-            await self._announce(task_id, label, task, enriched_result, origin, "ok")
+
+            # Call _announce_result — our patch below handles web vs non-web routing.
+            await self._announce_result(task_id, label, task, enriched_result, origin, "ok")
 
         except Exception as e:
             error_msg = f"Error: {e}"
             logger.error("Subagent [{}] failed: {}", task_id, e)
-            if progress:
-                progress.status = "error"
-                progress.last_thought = str(e)[:200]
-                progress.updated_at = time.time()
-            if hasattr(self, '_results'):
-                self._results[task_id] = error_msg
-            if hasattr(self, '_done_events') and task_id in self._done_events:
-                self._done_events[task_id].set()
             try:
                 messages.append({"role": "assistant", "content": error_msg})
                 if channel == "web":
@@ -383,19 +351,16 @@ def apply() -> None:
                             await save_cb(messages)
                         except Exception:
                             pass
-                # Non-web: same as success path — _announce handles persistence
             except Exception:
                 pass
-            await self._announce(task_id, label, task, error_msg, origin, "error")
+            await self._announce_result(task_id, label, task, error_msg, origin, "error")
 
     # -----------------------------------------------------------------------
-    # Patch 2: _announce — for web channel, bypass the bus (which
-    # goes through main agent → OutboundMessage(channel="web") → Unknown
-    # channel) and push the result directly to the registered callback.
+    # Patch 2: _announce_result — for web channel, bypass the bus (which goes
+    # through main agent → OutboundMessage(channel="web") → Unknown channel)
+    # and push the result directly to the registered callback.
     # -----------------------------------------------------------------------
-    _original_announce = SubagentManager._announce
-
-    async def _announce_patched(
+    async def _announce_result_patched(
         self: SubagentManager,
         task_id: str,
         label: str,
@@ -422,8 +387,8 @@ def apply() -> None:
                     return  # Skip bus path entirely for web channel
                 except Exception as exc:
                     logger.warning("Subagent announce to WebSocket failed: {}", exc)
-            # Fallback: if no callback registered, use original path (will warn Unknown channel)
-            await _original_announce(self, task_id, label, task, result, origin, status)
+            # Fallback: if no callback registered, use original path
+            await _original_announce_result(self, task_id, label, task, result, origin, status)
         else:
             # Non-web channels: use a custom InboundMessage with _subagent_label
             # metadata so the patched _process_message can save the incoming
@@ -449,8 +414,8 @@ def apply() -> None:
             await self.bus.publish_inbound(msg)
 
     SubagentManager._run_subagent = _run_subagent_patched  # type: ignore[method-assign]
-    SubagentManager._announce = _announce_patched  # type: ignore[method-assign]
-    logger.debug("SubagentManager patched: _run_subagent + _announce")
+    SubagentManager._announce_result = _announce_result_patched  # type: ignore[method-assign]
+    logger.debug("SubagentManager patched: _run_subagent + _announce_result")
 
     # -----------------------------------------------------------------------
     # Patch 3: AgentLoop.__init__ — inject self.sessions into the SubagentManager

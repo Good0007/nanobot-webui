@@ -321,13 +321,15 @@ async def ws_chat(websocket: WebSocket) -> None:
                     register_save_turn(_subagent_chat_key, _on_subagent_save_turn)
                     register_announce(_subagent_chat_key, _on_subagent_done)
                     try:
-                        response = await container.agent.process_direct(
+                        result = await container.agent.process_direct(
                             msg,
                             session_key=sess,
                             channel="web",
                             chat_id=user["id"],
                             on_progress=_on_progress,
                         )
+                        # nightly returns OutboundMessage; extract .content
+                        response = getattr(result, "content", result) if result else ""
                         if not response:
                             collected: list[str] = []
                             while not capture_q.empty():
@@ -338,7 +340,7 @@ async def ws_chat(websocket: WebSocket) -> None:
                             response = "\n\n".join(c for c in collected if c)
                         await websocket.send_json({
                             "type": "done",
-                            "content": response,
+                            "content": response or "",
                             "session_key": sess,
                         })
                     except asyncio.CancelledError:
