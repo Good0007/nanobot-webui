@@ -30,55 +30,68 @@ _apply_patches()
 
 
 def _make_provider(config):
-    """Replicate nanobot's _make_provider logic without importing the private helper."""
+    """Create the appropriate LLM provider from config.
+
+    Routing is driven by ``ProviderSpec.backend`` in the registry.
+    Compatible with nanobot main (registry-based architecture).
+    """
     from nanobot.providers.registry import find_by_name
 
     model: str = config.agents.defaults.model
     provider_name: str = config.get_provider_name(model)
     p = config.get_provider(model)
+    spec = find_by_name(provider_name) if provider_name else None
+    backend = spec.backend if spec else "openai_compat"
 
-    if provider_name == "openai_codex" or model.startswith("openai-codex/"):
-        from nanobot.providers.openai_codex_provider import OpenAICodexProvider
-        return OpenAICodexProvider(default_model=model)
-
-    if provider_name == "custom":
-        from nanobot.providers.custom_provider import CustomProvider
-        return CustomProvider(
-            api_key=p.api_key if p else "no-key",
-            api_base=config.get_api_base(model) or "http://localhost:8000/v1",
-            default_model=model,
-        )
-
-    if provider_name == "azure_openai":
-        from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
+    # --- validation ---
+    if backend == "azure_openai":
         if not p or not p.api_key or not p.api_base:
             print(
                 "Warning: Azure OpenAI requires api_key and api_base. "
                 "Set them in Settings → Providers.",
                 file=sys.stderr,
             )
-        else:
+    elif backend == "openai_compat" and not model.startswith("bedrock/"):
+        needs_key = not (p and p.api_key)
+        exempt = spec and (spec.is_oauth or spec.is_local or spec.is_direct)
+        if needs_key and not exempt:
+            print(
+                "Warning: No API key configured. "
+                "Start the WebUI and set one in Settings → Providers.",
+                file=sys.stderr,
+            )
+
+    # --- instantiation by backend ---
+    if backend == "openai_codex":
+        from nanobot.providers.openai_codex_provider import OpenAICodexProvider
+        return OpenAICodexProvider(default_model=model)
+
+    if backend == "azure_openai":
+        from nanobot.providers.azure_openai_provider import AzureOpenAIProvider
+        if p and p.api_key and p.api_base:
             return AzureOpenAIProvider(
                 api_key=p.api_key,
                 api_base=p.api_base,
                 default_model=model,
             )
 
-    from nanobot.providers.litellm_provider import LiteLLMProvider
-    spec = find_by_name(provider_name)
-    if not model.startswith("bedrock/") and not (p and p.api_key) and not (spec and spec.is_oauth):
-        print(
-            "Warning: No API key configured. "
-            "Start the WebUI and set one in Settings → Providers.",
-            file=sys.stderr,
+    if backend == "anthropic":
+        from nanobot.providers.anthropic_provider import AnthropicProvider
+        return AnthropicProvider(
+            api_key=p.api_key if p else None,
+            api_base=config.get_api_base(model),
+            default_model=model,
+            extra_headers=p.extra_headers if p else None,
         )
 
-    return LiteLLMProvider(
+    # Default: OpenAI-compatible (covers all other providers)
+    from nanobot.providers.openai_compat_provider import OpenAICompatProvider
+    return OpenAICompatProvider(
         api_key=p.api_key if p else None,
         api_base=config.get_api_base(model),
         default_model=model,
         extra_headers=p.extra_headers if p else None,
-        provider_name=provider_name,
+        spec=spec,
     )
 
 
