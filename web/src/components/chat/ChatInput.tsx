@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Send, Square, Wifi, WifiOff, Paperclip, X, Loader2, ImageIcon, FileText, Terminal } from "lucide-react";
 import { nanoid } from "nanoid";
@@ -39,6 +39,22 @@ export function ChatInput({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_TEXTAREA_H = 240;
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    // height:0 fully collapses even inside a flex container, unlike height:auto
+    el.style.overflowY = "hidden";
+    el.style.height = "0px";
+    const contentH = el.scrollHeight;
+    if (contentH > MAX_TEXTAREA_H) {
+      el.style.height = MAX_TEXTAREA_H + "px";
+      el.style.overflowY = "auto";
+    } else {
+      el.style.height = Math.max(contentH, 52) + "px";
+    }
+  }, [value]);
 
   const handleFilesSelected = useCallback(async (files: File[]) => {
     for (const file of files) {
@@ -94,15 +110,14 @@ export function ChatInput({
     setValue("");
     setAttachments([]);
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = "52px";
+      textareaRef.current.style.overflowY = "hidden";
     }
   }, [value, attachments, disabled, isUploading, onSend]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value);
-    const el = e.target;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 160) + "px";
+    // height adjustment is handled by useLayoutEffect
   };
 
   const removeAttachment = (id: string) =>
@@ -111,11 +126,11 @@ export function ChatInput({
   const canSend = (value.trim().length > 0 || attachments.filter((a) => a.url).length > 0) && !isUploading;
 
   return (
-    <div className="bg-background/85 backdrop-blur-xl" style={{ boxShadow: "var(--shadow-up)" }}>
-      <div className="w-full px-4 py-3">
+    <div className="px-4 pb-4 pt-2">
+      <div className="w-full">
         <div className={cn(
-          "relative flex flex-col rounded-2xl border bg-background shadow-sm transition-all",
-          isWaiting ? "border-primary/40" : "focus-within:border-primary/60 focus-within:shadow-md"
+          "relative flex flex-col rounded-2xl border bg-background/90 backdrop-blur-xl shadow-lg transition-all",
+          isWaiting ? "border-primary/40" : "focus-within:border-primary/60 focus-within:shadow-xl"
         )}>
           {/* Attachment chips */}
           {attachments.length > 0 && (
@@ -159,7 +174,7 @@ export function ChatInput({
             onPaste={handlePaste}
             placeholder={t("chat.placeholder")}
             rows={1}
-            className="min-h-[52px] max-h-[160px] flex-1 resize-none border-0 bg-transparent px-4 py-3.5 shadow-none focus-visible:ring-0 text-base leading-relaxed"
+            className="resize-none border-0 bg-transparent px-4 py-3.5 shadow-none focus-visible:ring-0 text-base leading-relaxed w-full"
             disabled={!isWaiting && disabled}
           />
           <div className="flex items-center justify-between px-3 pb-2">

@@ -47,7 +47,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { ConfirmDialog } from "../components/shared/ConfirmDialog";
 import { Skeleton } from "../components/ui/skeleton";
-import { Plus, Pencil, Trash2, ArrowLeft, Clock, MessageSquare, Bot, User, Wrench, Search, History } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Clock, MessageSquare, Bot, User, Wrench, Search, History, Power, PowerOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { formatDate } from "../lib/utils";
 import { cn } from "../lib/utils";
 
@@ -395,9 +396,9 @@ function JobsTab({
               <TableRow>
                 <TableHead>{t("cron.name")}</TableHead>
                 <TableHead>{t("cron.schedule")}</TableHead>
-                <TableHead>{t("cron.nextRun")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead className="w-40 text-right">{t("common.actions")}</TableHead>
+                <TableHead className="text-center">{t("cron.nextRun")}</TableHead>
+                <TableHead className="text-center">{t("common.status")}</TableHead>
+                <TableHead className="w-44 text-center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -411,12 +412,12 @@ function JobsTab({
                 >
                   <TableCell className="font-medium">{j.name}</TableCell>
                   <TableCell className="font-mono text-xs">{scheduleLabel(j.schedule, t)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-center text-xs text-muted-foreground">
                     {cat === "active"
                       ? fmtMs(j.state.next_run_at_ms)
                       : fmtMs(j.state.last_run_at_ms)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Badge
                       variant={jobStatusVariant(j, cat)}
                       className={cat === "expired" ? "text-muted-foreground" : ""}
@@ -424,55 +425,83 @@ function JobsTab({
                       {jobStatusLabel(j, cat)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    {/* Toggle enable/disable */}
-                    {cat === "disabled" ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => toggle.mutate({ id: j.id, enabled: true })}
-                      >
-                        {t("cron.enable")}
-                      </Button>
-                    ) : cat === "active" ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => toggle.mutate({ id: j.id, enabled: false })}
-                      >
-                        {t("cron.disable")}
-                      </Button>
-                    ) : null}
-                    {/* History */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => onViewSession?.(j.id)}
-                    >
-                      <History className="mr-1 h-3.5 w-3.5" />
-                      {t("cron.history")}
-                    </Button>
-                    {/* Edit */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => { setEditTarget(j); setMode("edit"); }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    {/* Delete */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-destructive"
-                      onClick={() => setDelTarget(j.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                  <TableCell>
+                    <TooltipProvider delayDuration={300}>
+                      <div className="flex items-center justify-center gap-0.5">
+                        {/* Toggle enable/disable */}
+                        {cat === "disabled" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-emerald-600 hover:text-emerald-700"
+                                onClick={() => toggle.mutate({ id: j.id, enabled: true })}
+                              >
+                                <Power className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("cron.enable")}</TooltipContent>
+                          </Tooltip>
+                        ) : cat === "active" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground"
+                                onClick={() => toggle.mutate({ id: j.id, enabled: false })}
+                              >
+                                <PowerOff className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("cron.disable")}</TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                        {/* History */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => onViewSession?.(j.id)}
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("cron.history")}</TooltipContent>
+                        </Tooltip>
+                        {/* Edit */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => { setEditTarget(j); setMode("edit"); }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("cron.edit")}</TooltipContent>
+                        </Tooltip>
+                        {/* Delete */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setDelTarget(j.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("cron.delete")}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}

@@ -95,6 +95,33 @@ async def create_job(
     return _to_info(job)
 
 
+@router.patch("/jobs/{job_id}/enabled", response_model=CronJobInfo)
+async def toggle_job(
+    job_id: str,
+    body: dict,
+    _admin: Annotated[dict, Depends(require_admin)],
+    svc: Annotated[ServiceContainer, Depends(get_services)],
+) -> CronJobInfo:
+    """Toggle only the enabled flag of a job."""
+    store = svc.cron._load_store()
+    job = next((j for j in store.jobs if j.id == job_id), None)
+    if not job:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Job '{job_id}' not found")
+
+    job.enabled = bool(body.get("enabled", job.enabled))
+    job.updated_at_ms = int(time.time() * 1000)
+
+    from nanobot.cron.service import _compute_next_run
+    if job.enabled:
+        job.state.next_run_at_ms = _compute_next_run(job.schedule, int(time.time() * 1000))
+    else:
+        job.state.next_run_at_ms = None
+
+    svc.cron._save_store()
+    svc.cron._arm_timer()
+    return _to_info(job)
+
+
 @router.put("/jobs/{job_id}", response_model=CronJobInfo)
 async def update_job(
     job_id: str,
