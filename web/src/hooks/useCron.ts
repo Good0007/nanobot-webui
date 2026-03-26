@@ -95,7 +95,7 @@ export function useToggleCronJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-      api.put(`/cron/jobs/${id}`, { enabled }).then((r) => r.data),
+      api.patch(`/cron/jobs/${id}/enabled`, { enabled }).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cron", "jobs"] });
     },

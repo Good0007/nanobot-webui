@@ -27,6 +27,14 @@ def _apply_patches() -> None:
 
 _apply_patches()
 
+
+def _is_default_workspace(workspace: Path | None) -> bool:
+    """Return whether a workspace resolves to nanobot's default workspace path."""
+    current = workspace if workspace is not None else Path.home() / ".nanobot" / "workspace"
+    default = Path.home() / ".nanobot" / "workspace"
+    return current.resolve(strict=False) == default.resolve(strict=False)
+
+
 async def main(
     web_port: int = 18780,
     web_host: str = "0.0.0.0",
@@ -69,7 +77,16 @@ async def main(
     )
     session_manager = SessionManager(config.workspace_path)
 
-    cron_store_path = get_cron_dir() / "jobs.json"
+    # Migrate legacy global cron store to workspace-scoped path (one-time, default workspace only).
+    if _is_default_workspace(config.workspace_path):
+        legacy_path = get_cron_dir() / "jobs.json"
+        new_path = config.workspace_path / "cron" / "jobs.json"
+        if legacy_path.is_file() and not new_path.exists():
+            new_path.parent.mkdir(parents=True, exist_ok=True)
+            import shutil
+            shutil.move(str(legacy_path), str(new_path))
+
+    cron_store_path = config.workspace_path / "cron" / "jobs.json"
     cron = CronService(cron_store_path)
 
     agent = AgentLoop(

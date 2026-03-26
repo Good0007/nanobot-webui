@@ -47,7 +47,8 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { ConfirmDialog } from "../components/shared/ConfirmDialog";
 import { Skeleton } from "../components/ui/skeleton";
-import { Plus, Pencil, Trash2, ArrowLeft, Clock, MessageSquare, Bot, User, Wrench, Search, History } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowLeft, Clock, MessageSquare, Bot, User, Wrench, Search, History, Power, PowerOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { formatDate } from "../lib/utils";
 import { cn } from "../lib/utils";
 
@@ -288,7 +289,7 @@ function JobsTab({
   const [mode, setMode] = useState<"create" | "edit" | null>(null);
   const [editTarget, setEditTarget] = useState<CronJob | null>(null);
   const [delTarget, setDelTarget] = useState<string | null>(null);
-  const [showDisabled, setShowDisabled] = useState(false);
+  const [showDisabled, setShowDisabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   const now = Date.now();
@@ -395,9 +396,9 @@ function JobsTab({
               <TableRow>
                 <TableHead>{t("cron.name")}</TableHead>
                 <TableHead>{t("cron.schedule")}</TableHead>
-                <TableHead>{t("cron.nextRun")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead className="w-40 text-right">{t("common.actions")}</TableHead>
+                <TableHead className="text-center">{t("cron.nextRun")}</TableHead>
+                <TableHead className="text-center">{t("common.status")}</TableHead>
+                <TableHead className="w-44 text-center">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -411,12 +412,12 @@ function JobsTab({
                 >
                   <TableCell className="font-medium">{j.name}</TableCell>
                   <TableCell className="font-mono text-xs">{scheduleLabel(j.schedule, t)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-center text-xs text-muted-foreground">
                     {cat === "active"
                       ? fmtMs(j.state.next_run_at_ms)
                       : fmtMs(j.state.last_run_at_ms)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <Badge
                       variant={jobStatusVariant(j, cat)}
                       className={cat === "expired" ? "text-muted-foreground" : ""}
@@ -424,55 +425,83 @@ function JobsTab({
                       {jobStatusLabel(j, cat)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
-                    {/* Toggle enable/disable */}
-                    {cat === "disabled" ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => toggle.mutate({ id: j.id, enabled: true })}
-                      >
-                        {t("cron.enable")}
-                      </Button>
-                    ) : cat === "active" ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs"
-                        onClick={() => toggle.mutate({ id: j.id, enabled: false })}
-                      >
-                        {t("cron.disable")}
-                      </Button>
-                    ) : null}
-                    {/* History */}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => onViewSession?.(j.id)}
-                    >
-                      <History className="mr-1 h-3.5 w-3.5" />
-                      {t("cron.history")}
-                    </Button>
-                    {/* Edit */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7"
-                      onClick={() => { setEditTarget(j); setMode("edit"); }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    {/* Delete */}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-destructive"
-                      onClick={() => setDelTarget(j.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                  <TableCell>
+                    <TooltipProvider delayDuration={300}>
+                      <div className="flex items-center justify-center gap-0.5">
+                        {/* Toggle enable/disable */}
+                        {cat === "disabled" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-emerald-600 hover:text-emerald-700"
+                                onClick={() => toggle.mutate({ id: j.id, enabled: true })}
+                              >
+                                <Power className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("cron.enable")}</TooltipContent>
+                          </Tooltip>
+                        ) : cat === "active" ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground"
+                                onClick={() => toggle.mutate({ id: j.id, enabled: false })}
+                              >
+                                <PowerOff className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t("cron.disable")}</TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                        {/* History */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => onViewSession?.(j.id)}
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("cron.history")}</TooltipContent>
+                        </Tooltip>
+                        {/* Edit */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => { setEditTarget(j); setMode("edit"); }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("cron.edit")}</TooltipContent>
+                        </Tooltip>
+                        {/* Delete */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setDelTarget(j.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("cron.delete")}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}
@@ -541,6 +570,9 @@ function roleBgClass(role: string) {
   }
 }
 
+/** Characters shown per "page" when content is long */
+const CONTENT_PAGE_SIZE = 2000;
+
 function MessageBubble({ msg, t }: { msg: CronSessionMessage; t: (k: string) => string }) {
   const contentStr =
     typeof msg.content === "string"
@@ -548,6 +580,12 @@ function MessageBubble({ msg, t }: { msg: CronSessionMessage; t: (k: string) => 
       : msg.content != null
         ? JSON.stringify(msg.content, null, 2)
         : null;
+
+  // Paginated expand: start by showing the first page, expand on demand
+  const [visibleChars, setVisibleChars] = useState(CONTENT_PAGE_SIZE);
+  const totalLen = contentStr?.length ?? 0;
+  const isLong = totalLen > CONTENT_PAGE_SIZE;
+  const isFullyExpanded = visibleChars >= totalLen;
 
   const roleLabel =
     msg.role === "user"
@@ -607,7 +645,43 @@ function MessageBubble({ msg, t }: { msg: CronSessionMessage; t: (k: string) => 
 
       {contentStr && (
         <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-          {contentStr.length > 2000 ? contentStr.slice(0, 2000) + "…" : contentStr}
+          {isFullyExpanded ? contentStr : contentStr.slice(0, visibleChars) + "…"}
+        </div>
+      )}
+
+      {/* Expand / collapse controls for long content */}
+      {isLong && (
+        <div className="flex items-center gap-2 mt-1.5">
+          {!isFullyExpanded && (
+            <>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline cursor-pointer"
+                onClick={() => setVisibleChars((v) => Math.min(v + CONTENT_PAGE_SIZE, totalLen))}
+              >
+                Show more (+{Math.min(CONTENT_PAGE_SIZE, totalLen - visibleChars).toLocaleString()} chars)
+              </button>
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline cursor-pointer"
+                onClick={() => setVisibleChars(totalLen)}
+              >
+                Show all ({totalLen.toLocaleString()} chars)
+              </button>
+            </>
+          )}
+          {visibleChars > CONTENT_PAGE_SIZE && (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline cursor-pointer"
+              onClick={() => setVisibleChars(CONTENT_PAGE_SIZE)}
+            >
+              Collapse
+            </button>
+          )}
+          <span className="text-[10px] text-muted-foreground ml-auto">
+            {Math.min(visibleChars, totalLen).toLocaleString()} / {totalLen.toLocaleString()}
+          </span>
         </div>
       )}
     </div>
@@ -672,7 +746,7 @@ function SessionDetail({
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
         </div>
       ) : messages && messages.length > 0 ? (
-        <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
+        <div className="space-y-2 flex-1 overflow-y-auto pr-1" tabIndex={0}>
           {messages.map((m, i) => (
             <MessageBubble key={i} msg={m} t={t} />
           ))}
@@ -721,8 +795,21 @@ function HistoryTab({
       const tail = rest.slice(lastColon + 1);
       if (/^\d+$/.test(tail)) {
         const jobPart = rest.slice(0, lastColon);
-        const ts = parseInt(tail, 10);
-        return { jobId: jobPart, executedAt: new Date(ts).toLocaleString() };
+        // The timestamp may be nanoseconds (19 digits), microseconds (16),
+        // or milliseconds (13).  Normalise to milliseconds for Date().
+        let ms: number;
+        if (tail.length >= 18) {
+          // nanoseconds → divide by 1_000_000 using BigInt to avoid precision loss
+          ms = Number(BigInt(tail) / BigInt(1_000_000));
+        } else if (tail.length >= 15) {
+          // microseconds
+          ms = Number(BigInt(tail) / BigInt(1_000));
+        } else {
+          ms = parseInt(tail, 10);
+        }
+        const d = new Date(ms);
+        const display = isNaN(d.getTime()) ? null : d.toLocaleString();
+        return { jobId: jobPart, executedAt: display };
       }
     }
     return { jobId: rest, executedAt: null };

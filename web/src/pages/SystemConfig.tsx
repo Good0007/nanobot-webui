@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Switch } from "../components/ui/switch";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
-import { DiffEditor } from "../components/ui/diff-editor";
+import { JsonEditor } from "../components/ui/json-editor";
 import { useRawConfig, useSaveRawConfig, exportWorkspace, useImportWorkspace, useS3Config, useSaveS3Config, type S3Config } from "../hooks/useConfig";
 
 // ── JSON validation helper ─────────────────────────────────────────────────
@@ -138,18 +138,16 @@ function RawConfigEditor() {
       </div>
 
       {/* Editor */}
-      <div className="relative">
-        <DiffEditor
-          original={originalContent ?? ""}
+      <div className={`rounded-md border overflow-hidden ${
+        jsonError ? "border-destructive" : "border-input"
+      }`}>
+        <JsonEditor
           value={content ?? ""}
+          original={originalContent ?? ""}
           onChange={handleChange}
-          className={`font-mono text-xs min-h-[520px] resize-y leading-relaxed ${
-            jsonError ? "border-destructive focus-visible:ring-destructive" : ""
-          }`}
-          spellCheck={false}
         />
         {jsonError && (
-          <p className="mt-1.5 text-xs text-destructive font-mono">{jsonError}</p>
+          <p className="px-3 py-1.5 text-xs text-destructive font-mono border-t border-destructive/30">{jsonError}</p>
         )}
       </div>
     </div>

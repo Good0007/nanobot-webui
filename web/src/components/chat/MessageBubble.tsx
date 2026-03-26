@@ -7,7 +7,7 @@ import type { ChatMessage } from "../../stores/chatStore";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { useAuthStore } from "../../stores/authStore";
-import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Wrench, Copy, Check, Undo2 } from "lucide-react";
+import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Copy, Check, Undo2 } from "lucide-react";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -141,15 +141,46 @@ function ToolResultBlock({ message }: { message: ChatMessage }) {
   );
 }
 
-/** SubAgent tool result block — indigo-tinted, collapsible, shows tool name + SubAgent badge */
+/** SubAgent tool result block — indigo-tinted, collapsible, shows label + SubAgent badge.
+ *
+ * Handles two formats:
+ * 1. Web-channel tool chains: name is the tool name (e.g. "exec"), content is tool output.
+ * 2. Non-web summary results: name is the SubAgent label (e.g. "正方一辩"),
+ *    content starts with "[SubAgent completed]" or "[Subagent '...' completed]".
+ */
 function SubAgentToolBlock({ message }: { message: ChatMessage }) {
   const isError = message.content.startsWith("Error:");
-  const isLong = message.content.length > 300;
+
+  // Detect summary-style messages (from _save_sub_tool_to_session or _announce_result)
+  const isSummary = /^\[Sub[Aa]gent[\s']/.test(message.content);
+
+  // For summary messages, extract just the result portion for display
+  let displayContent = message.content;
+  let resultSnippet = "";
+  if (isSummary) {
+    const resultMatch = message.content.match(/\nResult:\s*([\s\S]*)/);
+    resultSnippet = resultMatch?.[1]?.trim() ?? "";
+    displayContent = resultSnippet || message.content;
+  }
+
+  // Label: prefer message.name (set by backend), fall back to extracting from content
+  let label = message.name || "";
+  if (!label && isSummary) {
+    const labelMatch = message.content.match(/^\[Subagent '(.+?)'/);
+    label = labelMatch?.[1] ?? "SubAgent";
+  }
+  if (!label) label = "SubAgent";
+
+  const isLong = displayContent.length > 300;
   const [open, setOpen] = useState(false);
-  const toolName = message.name || "tool";
 
   return (
-    <div className="rounded-lg border text-xs overflow-hidden border-indigo-200/60 bg-indigo-50/30 dark:border-indigo-800/40 dark:bg-indigo-950/15">
+    <div className={cn(
+      "rounded-lg border text-xs overflow-hidden",
+      isError
+        ? "border-red-200/70 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/15"
+        : "border-indigo-200/60 bg-indigo-50/30 dark:border-indigo-800/40 dark:bg-indigo-950/15"
+    )}>
       <button
         onClick={() => isLong && setOpen((v) => !v)}
         className={cn(
@@ -159,13 +190,18 @@ function SubAgentToolBlock({ message }: { message: ChatMessage }) {
         )}
       >
         <Bot className="h-3 w-3 shrink-0 text-indigo-400/80" />
-        <span className="font-medium text-indigo-500/80 dark:text-indigo-400/80">⤹︎ SubAgent</span>
+        <span className="font-medium text-indigo-500/80 dark:text-indigo-400/80 truncate max-w-[120px]">
+          ⤹︎ {label}
+        </span>
         <span className="text-muted-foreground/40">·</span>
-        <Wrench className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-        <span className="font-mono font-medium text-foreground/70 truncate">{toolName}</span>
         {isError
           ? <XCircle className="h-3 w-3 shrink-0 text-red-500" />
           : <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />}
+        <span className="font-mono font-medium text-foreground/70 truncate">
+          {isSummary
+            ? (resultSnippet.length > 60 ? resultSnippet.slice(0, 60) + "…" : resultSnippet || "completed")
+            : (message.name || "tool")}
+        </span>
         <span className="ml-auto mr-1 shrink-0 text-[10px] text-muted-foreground/40">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
@@ -175,13 +211,13 @@ function SubAgentToolBlock({ message }: { message: ChatMessage }) {
             : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
         )}
       </button>
-      {(open || !isLong) && (
+      {(open || !isLong) && displayContent.length > 60 && (
         <div className="border-t border-indigo-200/40 dark:border-indigo-800/30 px-3 py-2">
           <pre className={cn(
             "max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed",
             isError ? "text-red-700/80 dark:text-red-300/70" : "text-muted-foreground/80"
           )}>
-            {message.content}
+            {displayContent}
           </pre>
         </div>
       )}
