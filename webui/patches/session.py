@@ -24,7 +24,7 @@ def _last_message_preview(path: Path) -> str | None:
                     content = data.get("content") or ""
                     if isinstance(content, str):
                         text = content.strip()
-                        if text and text != "[Background task progress]" and not text.startswith("<think>"):
+                        if text and text != "[Background task progress]" and not text.startswith("<think>") and not text.startswith("[SubAgent completed]") and not text.startswith("[Subagent '"):
                             return text[:80] + ("\u2026" if len(text) > 80 else "")
             except json.JSONDecodeError:
                 continue

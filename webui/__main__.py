@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import time
 from pathlib import Path
 
 from webui.patches import apply_all as _apply_all_patches
@@ -159,7 +160,7 @@ async def main(
         try:
             response = await agent.process_direct(
                 reminder_note,
-                session_key=f"cron:{job.id}",
+                session_key=f"cron:{job.id}:{int(time.time() * 1000)}",
                 channel=job.payload.channel or "cli",
                 chat_id=job.payload.to or "direct",
             )
