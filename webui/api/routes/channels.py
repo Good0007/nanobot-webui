@@ -124,9 +124,6 @@ async def list_channels(
 
     for name in _CHANNEL_NAMES:
         ch_cfg = getattr(svc.config.channels, name, None)
-        # Always include weixin/wecom (show default config when not yet saved to nanobot.yaml)
-        if ch_cfg is None and name not in ("weixin", "wecom"):
-            continue
         running_info = status_map.get(name, {})
         result.append(
             ChannelStatus(
@@ -157,7 +154,8 @@ async def update_channel(
             # wecom may not be in config yet — bootstrap with defaults
             ch_cfg = _wecom_default_config()
         else:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Channel '{name}' not found")
+            # Bootstrap unknown channel with empty dict so it can be patched
+            ch_cfg = {}
 
     # Only update fields that are provided and don't contain mask placeholders.
     # Use by_alias=True (camelCase) so that merging camelCase payload keys from

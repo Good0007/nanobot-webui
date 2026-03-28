@@ -63,7 +63,16 @@ async def main(
     from webui.api.gateway import ServiceContainer, start_api_server
     from webui.patches.provider import make_provider_patched
 
+    from nanobot.config.loader import get_config_path, save_config
+
     config = load_config()
+
+    # Auto-initialize config on first run (equivalent to `nanobot onboard`).
+    # This ensures config.json and workspace templates exist before we start.
+    if not get_config_path().exists():
+        save_config(config)
+        logger.info("First run: created default config at {}", get_config_path())
+
     if workspace:
         config.agents.defaults.workspace = workspace
     sync_workspace_templates(config.workspace_path)
