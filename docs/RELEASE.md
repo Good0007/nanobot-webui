@@ -2,25 +2,25 @@
 
 ## v0.2.5 — 2026-03-28
 
-**自定义 AI Provider 管理**
-- 支持动态添加、配置和删除自定义 AI Provider，无需重启服务
-- 自动适配 OpenAI 兼容接口（含 API 密钥、Base URL 及支持的模型列表）
-- 增强 Provider 匹配逻辑：通过补丁机制将自定义 Provider 注入 `nanobot` 核心代理循环
-- 前端设置界面提供 Provider 创建、编辑与删除弹窗，并同步 7 种语言的 i18n 翻译
+**Custom AI Provider Management**
+- Support dynamic addition, configuration, and deletion of custom AI providers without restarting services
+- Automatically adapt to OpenAI-compatible interfaces (including API keys, Base URLs, and supported model lists)
+- Enhanced provider matching logic: inject custom providers into the `nanobot` core agent loop via patching mechanism
+- Frontend settings interface provides modals for provider creation, editing, and deletion, with synchronized i18n translations for 7 languages
 
-**Cron 定时任务增强**
-- **任务隔离会话**：每次 Cron 执行现在拥有独立的会话 ID (`cron:{job_id}:{timestamp}`)，避免历史冲突
-- **记录查看器改进**：优化时间戳解析逻辑（兼容纳秒/微秒/毫秒精度），新增长消息折叠与分步状态渲染
-- **API 修复**：同步 `nanobot` 核心库 API 变更，修复任务切换开关的 422 校验错误，并将 Cron 数据存储迁移至工作区作用域
+**Cron Jobs Enhancement**
+- **Session Isolation**: Each cron execution now has an independent session ID (`cron:{job_id}:{timestamp}`) to avoid history conflicts
+- **Execution Viewer Improvements**: Optimized timestamp parsing logic (compatible with ns/μs/ms precision), added content folding for long messages, and step-by-step status rendering
+- **API Fixes**: Synchronized with `nanobot` core library API changes, fixed 422 validation errors for job toggles, and migrated cron data storage to workspace-scoped paths
 
-**消息渲染与交互优化**
-- **SubAgent 增强**：`MessageBubble` 现在能更好地渲染 SubAgent 的工具调用状态和总结内容
-- **JSON 编辑器更新**：`SystemConfig` 页面将原有的文本框替换为带语法高亮、折叠及 Diff 对比功能的 CodeMirror JSON 编辑器
-- **Chat 输入框修复**：优化移动端输入体验及特定场景下的回车提交逻辑
+**Message Rendering & UX Optimization**
+- **SubAgent Enhancement**: `MessageBubble` now better renders SubAgent tool call statuses and summary content
+- **JSON Editor Update**: Replaced textareas in `SystemConfig` page with CodeMirror JSON editor featuring syntax highlighting, folding, and inline diff highlighting
+- **Chat Input Fixes**: Optimized mobile input experience and enter-key submission logic in specific scenarios
 
-**系统兼容性与补丁**
-- 同步适配 `nanobot` nightly/main 分支最新的 API 变更（如 `_announce_result` 替代 `_announce`）
-- 更新 [Dockerfile](Dockerfile) 版本号并清理过期依赖
+**System Compatibility & Patching**
+- Synchronized with latest `nanobot` nightly/main branch API changes (e.g., `_announce_result` replacing `_announce`)
+- Updated [Dockerfile](Dockerfile) version and cleaned up obsolete dependencies
 
 ---
 
