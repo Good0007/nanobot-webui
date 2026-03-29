@@ -182,6 +182,40 @@ services:
     restart: unless-stopped
 ```
 
+#### 环境变量
+
+所有启动参数均可通过环境变量配置，便于在 Docker Compose 中灵活覆盖：
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `WEBUI_PORT` | `18780` | HTTP 监听端口 |
+| `WEBUI_HOST` | `0.0.0.0` | 绑定地址 |
+| `WEBUI_LOG_LEVEL` | `DEBUG` | 日志级别：`DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| `WEBUI_WORKSPACE` | _（nanobot 默认值）_ | 覆盖工作区目录路径 |
+| `WEBUI_CONFIG` | _（nanobot 默认值）_ | 指定 `config.json` 文件路径 |
+| `WEBUI_ONLY` | — | 设为 `true` 时跳过 IM 通道启动（用于 nanobot 已通过 systemd 等方式独立运行的场景） |
+
+`docker-compose.yml` 示例：
+
+```yaml
+services:
+  webui:
+    image: kangkang223/nanobot-webui:latest
+    container_name: nanobot-webui
+    environment:
+      - WEBUI_PORT=18780
+      - WEBUI_HOST=0.0.0.0
+      - WEBUI_LOG_LEVEL=INFO
+      # - WEBUI_WORKSPACE=/root/.nanobot/workspace
+      # - WEBUI_CONFIG=/root/.nanobot/config.json
+      # - WEBUI_ONLY=true
+    volumes:
+      - ~/.nanobot:/root/.nanobot
+    ports:
+      - "18780:18780"
+    restart: unless-stopped
+```
+
 #### 方式二 — 本地构建镜像
 
 ```bash
