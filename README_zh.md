@@ -146,7 +146,7 @@ docker compose down
 
 浏览器访问 **http://localhost:18780** — 默认账号：**admin / nanobot**，请在首次登录后立即修改密码。
 
-> **数据目录：** 所有配置、会话及工作区文件保存在宿主机的 `~/.nanobot-webui` 目录（映射到容器内的 `/root/.nanobot`）。
+> **数据目录：** 所有配置、会话及工作区文件保存在宿主机的 `~/.nanobot` 目录（映射到容器内的 `/root/.nanobot`）。
 
 #### 环境变量
 

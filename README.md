@@ -148,7 +148,7 @@ docker compose down
 
 Open **http://localhost:18780** — default credentials: **admin / nanobot**.
 
-> **Data directory:** all config, sessions, and workspace files are stored in `~/.nanobot-webui` on the host (mapped to `/root/.nanobot` inside the container).
+> **Data directory:** all config, sessions, and workspace files are stored in `~/.nanobot` on the host (mapped to `/root/.nanobot` inside the container).
 
 #### Environment Variables
 
