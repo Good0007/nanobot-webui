@@ -1,5 +1,27 @@
 # Release Notes
 
+## v0.2.6 — 2026-03-29
+
+**System Logs Viewer**
+- Add a new "System Logs" tab in the System Config page to view WebUI runtime logs (`webui.log`) directly in the browser
+- **Safe & Efficient**: Replaced `subprocess.run` `tail` with Python's native `collections.deque` for secure, cross-platform log trailing without spawning child processes
+- **Keyword Filtering**: Added real-time grep-like keyword filtering with a debounced search input
+- **Responsive UX**: Implemented a flex-based responsive layout for mobile compatibility, with an auto-scroll toggle and adjustable line count
+- Fully localized with 7 UI languages
+
+**Docker & Deployment Enhancements**
+- Add `docker-entrypoint.sh` with robust environment variable substitution support
+- Update Dockerfile to support seamless image builds
+- Fix CLI daemon start command and restructure WebUI subcommands
+
+**Channel & Core Compatibility**
+- Fix `--webui-only` mode: correctly report channel running status from config even when channels are managed by an external process
+- Auto-initialize config on first run and ensure all channels are visible regardless of config state
+- Upgrade to `nanobot-ai v0.1.4.post6` and fix provider backend attribute retrieval (`getattr(spec, 'backend')`)
+- Add initial support for WeCom (Enterprise WeChat) channel
+
+---
+
 ## v0.2.5 — 2026-03-28
 
 **Custom AI Provider Management**
