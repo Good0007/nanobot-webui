@@ -62,7 +62,7 @@ Provides a full-featured UI to configure, converse with, and manage your nanobot
 | **PWA** | Installable as a desktop / home-screen app; auto-detects updates and prompts a one-click reload |
 | **Mobile-ready** | Responsive layout with dedicated iOS Safari keyboard fix to keep the input always visible |
 | **Dark mode** | One-click light / dark toggle; defaults to system preference on first visit; dark palette uses warm charcoal tones to match the brand colour |
-| **i18n** | 7 built-in UI languages: 中文、繁體中文、English、日本語、한국어、Deutsch、Français — auto-detected from browser language / timezone; switch anytime via the language submenu |
+| **i18n** | 9 built-in UI languages: 中文、繁體中文、English、日本語、한국어、Deutsch、Français、Português、Español — auto-detected from browser language / timezone; switch anytime via the language submenu |
 
 ---
 
@@ -486,8 +486,7 @@ nanobot-webui/
 | UI components | shadcn/ui + Tailwind CSS v3 |
 | Client state | Zustand (persist middleware) |
 | Server state | TanStack Query v5 |
-| i18n | react-i18next (zh / en) |
+| i18n | react-i18next (9 UI languages) |
 | Theme | next-themes (light / dark / system) |
 | Real-time | WebSocket (`/ws/chat`) |
 | Package manager | Bun |
-

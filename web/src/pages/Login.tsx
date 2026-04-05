@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { User, Lock, Languages } from "lucide-react";
+import { LANGUAGE_OPTIONS, getLanguageLabel } from "../i18n/languages";
 
 export default function Login() {
   const { t, i18n } = useTranslation();
@@ -53,18 +54,6 @@ export default function Login() {
     i18n.changeLanguage(lang);
   };
 
-  const LANG_LABELS: Record<string, string> = {
-    zh: "中文",
-    "zh-TW": "繁體中文",
-    en: "English",
-    ja: "日本語",
-    ko: "한국어",
-    de: "Deutsch",
-    fr: "Français",
-  };
-
-  const getLanguageLabel = () => LANG_LABELS[i18n.language] ?? "English";
-
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-950 dark:via-gray-900 dark:to-orange-950 px-4">
       {/* 装饰性背景圆圈 */}
@@ -77,31 +66,15 @@ export default function Login() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2 backdrop-blur-sm bg-white/50 dark:bg-gray-900/50">
               <Languages className="h-4 w-4" />
-              {getLanguageLabel()}
+              {getLanguageLabel(i18n.language)}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => changeLanguage("zh")}>
-              中文
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeLanguage("zh-TW")}>
-              繁體中文
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeLanguage("en")}>
-              English
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeLanguage("ja")}>
-              日本語
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeLanguage("ko")}>
-              한국어
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeLanguage("de")}>
-              Deutsch
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => changeLanguage("fr")}>
-              Français
-            </DropdownMenuItem>
+            {LANGUAGE_OPTIONS.map(({ code, label }) => (
+              <DropdownMenuItem key={code} onClick={() => changeLanguage(code)}>
+                {label}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

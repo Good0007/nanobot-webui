@@ -12,6 +12,7 @@ import {
 import { Sun, Moon, Languages, LogOut, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { LANGUAGE_OPTIONS, getLanguageLabel } from "../../i18n/languages";
 
 export function Header() {
   const { t, i18n } = useTranslation();
@@ -21,11 +22,15 @@ export function Header() {
   const [showChangePwd, setShowChangePwd] = useState(false);
 
   const toggleLang = () => {
-    const next = i18n.language === "zh" ? "en" : i18n.language === "en" ? "ja" : "zh";
-    i18n.changeLanguage(next);
+    const currentIndex = LANGUAGE_OPTIONS.findIndex(
+      ({ code }) => code === i18n.language,
+    );
+    const nextIndex =
+      currentIndex >= 0 ? (currentIndex + 1) % LANGUAGE_OPTIONS.length : 0;
+    i18n.changeLanguage(LANGUAGE_OPTIONS[nextIndex].code);
   };
 
-  const langLabel = i18n.language === "zh" ? "中" : i18n.language === "ja" ? "日" : "En";
+  const langLabel = getLanguageLabel(i18n.language);
 
   return (
     <header className="flex h-12 items-center bg-background px-4">

@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { LANGUAGE_OPTIONS, getLanguageLabel } from "../../i18n/languages";
 
 export function MobileTopBar() {
   const { t, i18n } = useTranslation();
@@ -23,10 +24,7 @@ export function MobileTopBar() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [showChangePwd, setShowChangePwd] = useState(false);
 
-  const LANG_LABELS: Record<string, string> = {
-    zh: "中文", "zh-TW": "繁體中文", en: "English", ja: "日本語", ko: "한국어", de: "Deutsch", fr: "Français",
-  };
-  const currentLangLabel = LANG_LABELS[i18n.language] ?? "English";
+  const currentLangLabel = getLanguageLabel(i18n.language);
 
   const isDark = resolvedTheme === "dark";
 
@@ -75,7 +73,7 @@ export function MobileTopBar() {
                   <Languages className="mr-2 h-4 w-4" />{currentLangLabel}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  {Object.entries(LANG_LABELS).map(([code, label]) => (
+                  {LANGUAGE_OPTIONS.map(({ code, label }) => (
                     <DropdownMenuItem
                       key={code}
                       onClick={() => i18n.changeLanguage(code)}

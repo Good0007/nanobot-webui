@@ -9,21 +9,23 @@ import ja from "./locales/ja.json";
 import ko from "./locales/ko.json";
 import de from "./locales/de.json";
 import fr from "./locales/fr.json";
+import pt from "./locales/pt.json";
+import es from "./locales/es.json";
+import {
+  DEFAULT_LANGUAGE,
+  LANGUAGE_STORAGE_KEY,
+  SUPPORTED_LANGS,
+  isSupportedLanguage,
+} from "./languages";
 
-const SUPPORTED_LANGS = ["zh", "zh-TW", "en", "ja", "ko", "de", "fr"] as const;
-
-// 根据浏览器语言或时区自动检测语言
 const detectLanguage = (): string => {
-  // 首先检查localStorage中是否有保存的语言设置
-  const savedLang = localStorage.getItem("nanobot-lang");
-  if (savedLang && (SUPPORTED_LANGS as readonly string[]).includes(savedLang)) {
+  const savedLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (savedLang && isSupportedLanguage(savedLang)) {
     return savedLang;
   }
 
-  // 获取浏览器语言
   const browserLang = navigator.language.toLowerCase();
 
-  // 根据浏览器语言判断
   if (browserLang.startsWith("zh-tw") || browserLang.startsWith("zh-hk") || browserLang.startsWith("zh-hant")) {
     return "zh-TW";
   } else if (browserLang.startsWith("zh")) {
@@ -36,11 +38,14 @@ const detectLanguage = (): string => {
     return "de";
   } else if (browserLang.startsWith("fr")) {
     return "fr";
+  } else if (browserLang.startsWith("pt")) {
+    return "pt";
+  } else if (browserLang.startsWith("es")) {
+    return "es";
   } else if (browserLang.startsWith("en")) {
     return "en";
   }
 
-  // 根据时区判断（作为备用方案）
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (timezone.includes("Asia/Shanghai")) {
     return "zh";
@@ -54,10 +59,25 @@ const detectLanguage = (): string => {
     return "de";
   } else if (timezone.includes("Europe/Paris") || timezone.includes("Europe/Brussels") || timezone.includes("America/Montreal")) {
     return "fr";
+  } else if (
+    timezone.includes("America/Sao_Paulo") ||
+    timezone.includes("America/Fortaleza") ||
+    timezone.includes("America/Recife") ||
+    timezone.includes("Europe/Lisbon")
+  ) {
+    return "pt";
+  } else if (
+    timezone.includes("Europe/Madrid") ||
+    timezone.includes("America/Mexico_City") ||
+    timezone.includes("America/Bogota") ||
+    timezone.includes("America/Lima") ||
+    timezone.includes("America/Santiago") ||
+    timezone.includes("America/Buenos_Aires")
+  ) {
+    return "es";
   }
 
-  // 默认返回英语
-  return "en";
+  return DEFAULT_LANGUAGE;
 };
 
 i18n
@@ -72,14 +92,16 @@ i18n
       ko: { translation: ko },
       de: { translation: de },
       fr: { translation: fr },
+      pt: { translation: pt },
+      es: { translation: es },
     },
     lng: detectLanguage(),
-    fallbackLng: "en",
+    fallbackLng: DEFAULT_LANGUAGE,
     supportedLngs: [...SUPPORTED_LANGS],
     detection: {
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
-      lookupLocalStorage: "nanobot-lang",
+      lookupLocalStorage: LANGUAGE_STORAGE_KEY,
     },
     interpolation: {
       escapeValue: false,

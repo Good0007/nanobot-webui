@@ -33,6 +33,7 @@ import {
 } from "../ui/dropdown-menu";
 import { useState } from "react";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { LANGUAGE_OPTIONS, getLanguageLabel } from "../../i18n/languages";
 
 interface NavItem {
   path: string;
@@ -107,10 +108,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     location.pathname === item.path ||
     (item.path !== "/dashboard" && location.pathname.startsWith(item.path));
 
-  const LANG_LABELS: Record<string, string> = {
-    zh: "中文", "zh-TW": "繁體中文", en: "English", ja: "日本語", ko: "한국어", de: "Deutsch", fr: "Français",
-  };
-  const currentLangLabel = LANG_LABELS[i18n.language] ?? "English";
+  const currentLangLabel = getLanguageLabel(i18n.language);
 
   return (
     <aside
@@ -211,7 +209,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Languages className="mr-2 h-4 w-4" />{currentLangLabel}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    {Object.entries(LANG_LABELS).map(([code, label]) => (
+                    {LANGUAGE_OPTIONS.map(({ code, label }) => (
                       <DropdownMenuItem
                         key={code}
                         onClick={() => i18n.changeLanguage(code)}
@@ -263,7 +261,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <Languages className="mr-2 h-4 w-4" />{currentLangLabel}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    {Object.entries(LANG_LABELS).map(([code, label]) => (
+                    {LANGUAGE_OPTIONS.map(({ code, label }) => (
                       <DropdownMenuItem
                         key={code}
                         onClick={() => i18n.changeLanguage(code)}
