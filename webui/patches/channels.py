@@ -8,6 +8,7 @@ def apply() -> None:
     Patch 2: ChannelManager._validate_allow_from — no-op; WebUI manages this via UI.
     Patch 3: DingTalkChannel.send() — rich card title for SubAgent results.
     Patch 4: FeishuChannel.send() — indigo header card for SubAgent results.
+    Patch 5: Telegram polling conflict — stop channel cleanly on duplicate getUpdates.
 
     Note: The old Patch 3 (_dispatch_outbound override) has been removed.
     nanobot v0.1.4.post6 ships its own _dispatch_outbound with streaming delta
@@ -98,5 +99,59 @@ def apply() -> None:
 
         FeishuChannel.send = _feishu_send_patched  # type: ignore[method-assign]
         logger.debug("FeishuChannel.send patched for SubAgent cards")
+    except ImportError:
+        pass
+
+    # ── Patch 6: Telegram — stop cleanly on polling Conflict ─────────────────
+
+    try:
+        from telegram.error import Conflict
+        from telegram.ext import Updater
+        from nanobot.channels.telegram import TelegramChannel
+
+        if not getattr(TelegramChannel, "_webui_conflict_patch_applied", False):
+            _active_tg_channel = None
+            _original_tg_start = TelegramChannel.start
+            _original_updater_start_polling = Updater.start_polling
+
+            def _stop_channel_on_conflict(channel: TelegramChannel) -> None:
+                if getattr(channel, "_stopping_due_to_conflict", False):
+                    return
+                setattr(channel, "_stopping_due_to_conflict", True)
+                logger.error(
+                    "Telegram polling conflict: another bot instance is using this token. "
+                    "Stopping Telegram channel in this process."
+                )
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(channel.stop())
+                except RuntimeError:
+                    channel._running = False  # type: ignore[attr-defined]
+
+            async def _updater_start_polling_patched(self, *args, **kwargs):
+                if "error_callback" not in kwargs and _active_tg_channel is not None:
+                    channel = _active_tg_channel
+
+                    def _error_callback(error):
+                        if isinstance(error, Conflict):
+                            _stop_channel_on_conflict(channel)
+
+                    kwargs["error_callback"] = _error_callback
+                return await _original_updater_start_polling(self, *args, **kwargs)
+
+            async def _telegram_start_patched(self):
+                nonlocal _active_tg_channel
+                setattr(self, "_stopping_due_to_conflict", False)
+                _active_tg_channel = self
+                try:
+                    return await _original_tg_start(self)
+                finally:
+                    if _active_tg_channel is self:
+                        _active_tg_channel = None
+
+            Updater.start_polling = _updater_start_polling_patched  # type: ignore[method-assign]
+            TelegramChannel.start = _telegram_start_patched  # type: ignore[method-assign]
+            setattr(TelegramChannel, "_webui_conflict_patch_applied", True)
+            logger.debug("Telegram polling conflict patch applied")
     except ImportError:
         pass
