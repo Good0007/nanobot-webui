@@ -642,10 +642,10 @@ function AgentTab() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label>{t("settings.execSandbox")}</Label>
-                <Select value={execSandbox} onValueChange={setExecSandbox}>
+                <Select value={execSandbox || "__none__"} onValueChange={(v) => setExecSandbox(v === "__none__" ? "" : v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t("settings.execSandboxNone")}</SelectItem>
+                    <SelectItem value="__none__">{t("settings.execSandboxNone")}</SelectItem>
                     <SelectItem value="bwrap">{t("settings.execSandboxBwrap")}</SelectItem>
                   </SelectContent>
                 </Select>
