@@ -62,11 +62,25 @@ async def get_agent_settings(
         workspace=d.workspace,
         restrict_to_workspace=t.restrict_to_workspace,
         exec_timeout=t.exec.timeout,
+        exec_enable=t.exec.enable,
+        exec_sandbox=t.exec.sandbox,
         path_append=t.exec.path_append,
         web_search_api_key=_mask(t.web.search.api_key),
         web_proxy=t.web.proxy,
+        web_enable=t.web.enable,
+        web_search_provider=t.web.search.provider,
+        web_search_base_url=t.web.search.base_url,
+        web_search_max_results=t.web.search.max_results,
+        web_search_timeout=t.web.search.timeout,
+        ssrf_whitelist=list(t.ssrf_whitelist),
+        dream_interval_h=d.dream.interval_h,
+        dream_model_override=d.dream.model_override,
+        dream_max_batch_size=d.dream.max_batch_size,
+        dream_max_iterations=d.dream.max_iterations,
         send_progress=ch.send_progress,
         send_tool_hints=ch.send_tool_hints,
+        channels_send_max_retries=ch.send_max_retries,
+        channels_transcription_provider=ch.transcription_provider,
     )
 
 
@@ -102,16 +116,44 @@ async def update_agent_settings(
         t.restrict_to_workspace = body.restrict_to_workspace
     if body.exec_timeout is not None:
         t.exec.timeout = body.exec_timeout
+    if body.exec_enable is not None:
+        t.exec.enable = body.exec_enable
+    if body.exec_sandbox is not None:
+        t.exec.sandbox = body.exec_sandbox
     if body.path_append is not None:
         t.exec.path_append = body.path_append
     if body.web_search_api_key is not None:
         t.web.search.api_key = body.web_search_api_key
     if body.web_proxy is not None:
         t.web.proxy = body.web_proxy or None
+    if body.web_enable is not None:
+        t.web.enable = body.web_enable
+    if body.web_search_provider is not None:
+        t.web.search.provider = body.web_search_provider
+    if body.web_search_base_url is not None:
+        t.web.search.base_url = body.web_search_base_url
+    if body.web_search_max_results is not None:
+        t.web.search.max_results = body.web_search_max_results
+    if body.web_search_timeout is not None:
+        t.web.search.timeout = body.web_search_timeout
+    if body.ssrf_whitelist is not None:
+        t.ssrf_whitelist = body.ssrf_whitelist
+    if body.dream_interval_h is not None:
+        d.dream.interval_h = body.dream_interval_h
+    if body.dream_model_override is not None:
+        d.dream.model_override = body.dream_model_override or None
+    if body.dream_max_batch_size is not None:
+        d.dream.max_batch_size = body.dream_max_batch_size
+    if body.dream_max_iterations is not None:
+        d.dream.max_iterations = body.dream_max_iterations
     if body.send_progress is not None:
         ch.send_progress = body.send_progress
     if body.send_tool_hints is not None:
         ch.send_tool_hints = body.send_tool_hints
+    if body.channels_send_max_retries is not None:
+        ch.send_max_retries = body.channels_send_max_retries
+    if body.channels_transcription_provider is not None:
+        ch.transcription_provider = body.channels_transcription_provider
 
     save_config(svc.config)
     svc.reload_provider()

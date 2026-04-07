@@ -168,11 +168,11 @@ def _extract_interaction_log(messages: list) -> str:
 def apply() -> None:
     """Monkey-patch SubagentManager to emit progress events.
 
-    Targets nanobot nightly (≥ 0.1.5) which has:
+    Targets nanobot ≥ 0.1.5 which has:
     - ``_announce_result`` (not ``_announce``)
     - ``_run_subagent(self, task_id, task, label, origin)``
-    - ``_build_subagent_prompt(self)`` (no args)
-    - ``SpawnTool.set_context(channel, chat_id)`` (no session_key)
+    - ``AgentRunner`` + ``AgentRunSpec`` for the execution loop
+    - GlobTool / GrepTool, exec_config.enable / sandbox, web_config.enable
     """
     from nanobot.agent.subagent import SubagentManager
     from nanobot.bus.events import OutboundMessage
@@ -180,7 +180,8 @@ def apply() -> None:
     _original_announce_result = SubagentManager._announce_result
 
     # -----------------------------------------------------------------------
-    # Patch 1: _run_subagent — add progress tracking + WebUI progress push
+    # Patch 1: _run_subagent — delegate to v0.1.5 AgentRunner with a progress
+    # hook that pushes tool-hint events to the WebUI / external channels.
     # -----------------------------------------------------------------------
     async def _run_subagent_patched(
         self: SubagentManager,
@@ -189,26 +190,24 @@ def apply() -> None:
         label: str,
         origin: dict[str, str],
     ) -> None:
-        """Augmented _run_subagent: progress tracking + WebUI progress push per tool call."""
-        import asyncio
-
+        """Augmented _run_subagent: uses AgentRunner + hook for progress push."""
+        from nanobot.agent.hook import AgentHook, AgentHookContext
+        from nanobot.agent.runner import AgentRunSpec
         from nanobot.agent.skills import BUILTIN_SKILLS_DIR
         from nanobot.agent.tools.filesystem import EditFileTool, ListDirTool, ReadFileTool, WriteFileTool
         from nanobot.agent.tools.registry import ToolRegistry
+        from nanobot.agent.tools.search import GlobTool, GrepTool
         from nanobot.agent.tools.shell import ExecTool
         from nanobot.agent.tools.web import WebFetchTool, WebSearchTool
-        from nanobot.utils.helpers import build_assistant_message
 
         channel = origin.get("channel", "")
         chat_id = str(origin.get("chat_id", ""))
         chat_key = f"{channel}:{chat_id}"
-        # For cron sessions, the session_key (e.g. "cron:abc123") differs from
-        # chat_key ("cli:direct").  Use origin["session_key"] when available so
-        # sub-agent messages are persisted under the correct session.
+        # For cron sessions, origin["session_key"] may differ from chat_key;
+        # persist sub-agent messages to the correct session when available.
         save_session_key = origin.get("session_key") or chat_key
 
         async def _emit_progress(hint: str) -> None:
-            """Push a tool-hint progress event via the appropriate path."""
             text = f"[↳ {label}] {hint}"
             if channel == "web":
                 cb = _progress_registry.get(chat_key)
@@ -228,25 +227,50 @@ def apply() -> None:
                 except Exception:
                     pass
 
+        class _ProgressHook(AgentHook):
+            """Emit WebUI/channel progress hints before each tool-call batch."""
+
+            async def before_execute_tools(self_hook, context: AgentHookContext) -> None:
+                for tc in context.tool_calls:
+                    args = tc.arguments
+                    if isinstance(args, list):
+                        args = args[0] if args else {}
+                    val = next(iter(args.values()), None) if isinstance(args, dict) else None
+                    if isinstance(val, str):
+                        hint = f'{tc.name}("{val[:40]}…")' if len(val) > 40 else f'{tc.name}("{val}")'
+                    else:
+                        hint = tc.name
+                    await _emit_progress(hint)
+                    # Extra progress for inter-agent messages
+                    if tc.name == "send_to_agent" and isinstance(args, dict):
+                        recip = args.get("recipient", "?")
+                        msg_content = args.get("content", "")
+                        await _emit_progress(f"📤 向 agent {recip} 发送: {msg_content[:80]}")
+
         logger.info("Subagent [{}] starting task: {}", task_id, label)
 
         try:
-            # Build tools — mirrors nightly _run_subagent exactly
+            # Build tools — mirrors v0.1.5 _run_subagent exactly
             tools = ToolRegistry()
-            allowed_dir = self.workspace if self.restrict_to_workspace else None
+            allowed_dir = self.workspace if (self.restrict_to_workspace or self.exec_config.sandbox) else None
             extra_read = [BUILTIN_SKILLS_DIR] if allowed_dir else None
             tools.register(ReadFileTool(workspace=self.workspace, allowed_dir=allowed_dir, extra_allowed_dirs=extra_read))
             tools.register(WriteFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
             tools.register(EditFileTool(workspace=self.workspace, allowed_dir=allowed_dir))
             tools.register(ListDirTool(workspace=self.workspace, allowed_dir=allowed_dir))
-            tools.register(ExecTool(
-                working_dir=str(self.workspace),
-                timeout=self.exec_config.timeout,
-                restrict_to_workspace=self.restrict_to_workspace,
-                path_append=self.exec_config.path_append,
-            ))
-            tools.register(WebSearchTool(config=self.web_search_config, proxy=self.web_proxy))
-            tools.register(WebFetchTool(proxy=self.web_proxy))
+            tools.register(GlobTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            tools.register(GrepTool(workspace=self.workspace, allowed_dir=allowed_dir))
+            if self.exec_config.enable:
+                tools.register(ExecTool(
+                    working_dir=str(self.workspace),
+                    timeout=self.exec_config.timeout,
+                    restrict_to_workspace=self.restrict_to_workspace,
+                    sandbox=self.exec_config.sandbox,
+                    path_append=self.exec_config.path_append,
+                ))
+            if self.web_config.enable:
+                tools.register(WebSearchTool(config=self.web_config.search, proxy=self.web_config.proxy))
+                tools.register(WebFetchTool(proxy=self.web_config.proxy))
 
             system_prompt = self._build_subagent_prompt()
             messages: list[dict[str, Any]] = [
@@ -254,105 +278,67 @@ def apply() -> None:
                 {"role": "user", "content": task},
             ]
 
-            model = self.model
-            provider = self.provider
-            final_result: str | None = None
-            max_iterations = 15
+            result = await self.runner.run(AgentRunSpec(
+                initial_messages=messages,
+                tools=tools,
+                model=self.model,
+                max_iterations=15,
+                max_tool_result_chars=self.max_tool_result_chars,
+                hook=_ProgressHook(),
+                max_iterations_message="Task completed but no final response was generated.",
+                error_message=None,
+                fail_on_tool_error=True,
+            ))
 
-            for iteration in range(1, max_iterations + 1):
-                response = await provider.chat_with_retry(
-                    messages=messages,
-                    tools=tools.get_definitions(),
-                    model=model,
-                )
-
-                if response.has_tool_calls:
-                    # Emit progress hint to WebUI / channel
-                    def _tool_hint(tool_calls: list) -> str:
-                        def _fmt(tc: Any) -> str:
-                            args = (tc.arguments[0] if isinstance(tc.arguments, list) else tc.arguments) or {}
-                            val = next(iter(args.values()), None) if isinstance(args, dict) else None
-                            if not isinstance(val, str):
-                                return tc.name
-                            return f'{tc.name}("{val[:40]}…")' if len(val) > 40 else f'{tc.name}("{val}")'
-                        return ", ".join(_fmt(tc) for tc in tool_calls)
-
-                    await _emit_progress(_tool_hint(response.tool_calls))
-
-                    tc_dicts = [tc.to_openai_tool_call() for tc in response.tool_calls]
-                    messages.append(build_assistant_message(
-                        response.content or "", tool_calls=tc_dicts,
-                        reasoning_content=response.reasoning_content,
-                        thinking_blocks=response.thinking_blocks,
-                    ))
-
-                    # Execute tools (sequential, matching nightly)
-                    for tc in response.tool_calls:
+            # Handle tool_error stop (partial progress)
+            if result.stop_reason == "tool_error":
+                error_result = self._format_partial_progress(result)
+                if channel == "web":
+                    save_cb = _save_turn_registry.get(chat_key)
+                    if save_cb:
                         try:
-                            result = await tools.execute(tc.name, tc.arguments)
-                        except Exception as exc:
-                            result = f"Error: {type(exc).__name__}: {exc}"
-                        messages.append({
-                            "role": "tool", "tool_call_id": tc.id,
-                            "name": tc.name, "content": result,
-                        })
-                        # Push send_to_agent interaction to parent channel
-                        if tc.name == "send_to_agent":
-                            try:
-                                _args = tc.arguments
-                                if isinstance(_args, list):
-                                    _args = _args[0] if _args else {}
-                                _recip = _args.get("recipient", "?") if isinstance(_args, dict) else "?"
-                                _msg = _args.get("content", "") if isinstance(_args, dict) else ""
-                                await _emit_progress(f"📤 向 agent {_recip} 发送: {_msg[:80]}")
-                            except Exception:
-                                pass
-                else:
-                    final_result = response.content
-                    break
+                            await save_cb(result.messages)
+                        except Exception:
+                            pass
+                await self._announce_result(task_id, label, task, error_result, origin, "error")
+                return
 
-            if final_result is None:
-                final_result = "Task completed but no final response was generated."
+            # Handle generic runner error
+            if result.stop_reason == "error":
+                error_msg = result.error or "Error: subagent execution failed."
+                if channel == "web":
+                    save_cb = _save_turn_registry.get(chat_key)
+                    if save_cb:
+                        try:
+                            await save_cb(result.messages)
+                        except Exception:
+                            pass
+                await self._announce_result(task_id, label, task, error_msg, origin, "error")
+                return
 
-            # Append the final assistant message so _save_turn captures it.
-            messages.append({"role": "assistant", "content": final_result})
-
+            final_result = result.final_content or "Task completed but no final response was generated."
             logger.info("Subagent [{}] completed successfully", task_id)
 
-            # Extract inter-agent communication log
-            interaction_log = _extract_interaction_log(messages)
-
-            # Build enriched result that includes interaction log
-            enriched_result = final_result or ""
+            # Extract inter-agent communication log from full message history
+            interaction_log = _extract_interaction_log(result.messages)
+            enriched_result = final_result
             if interaction_log:
                 enriched_result = f"{interaction_log}\n\n---\n\n**最终输出：**\n{enriched_result}"
 
-            # Persist to session (web channel uses registered callback)
+            # Persist full message history to WebUI session
             if channel == "web":
                 save_cb = _save_turn_registry.get(chat_key)
                 if save_cb:
                     try:
-                        await save_cb(messages)
+                        await save_cb(result.messages)
                     except Exception:
                         pass
 
-            # Call _announce_result — our patch below handles web vs non-web routing.
             await self._announce_result(task_id, label, task, enriched_result, origin, "ok")
 
         except Exception as e:
             error_msg = f"Error: {e}"
             logger.error("Subagent [{}] failed: {}", task_id, e)
-            try:
-                messages.append({"role": "assistant", "content": error_msg})
-                if channel == "web":
-                    save_cb = _save_turn_registry.get(chat_key)
-                    if save_cb:
-                        try:
-                            await save_cb(messages)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
             await self._announce_result(task_id, label, task, error_msg, origin, "error")
 
     # -----------------------------------------------------------------------
