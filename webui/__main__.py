@@ -99,7 +99,8 @@ async def main(
     cron_store_path = config.workspace_path / "cron" / "jobs.json"
     cron = CronService(cron_store_path)
 
-    agent = AgentLoop(
+    # Build AgentLoop kwargs — compatible with both nanobot 0.1.4 and 0.1.5+
+    _agent_kwargs: dict = dict(
         bus=bus,
         provider=provider,
         workspace=config.workspace_path,
@@ -114,6 +115,15 @@ async def main(
         mcp_servers=config.tools.mcp_servers,
         channels_config=config.channels,
     )
+    # nanobot >= 0.1.5 uses web_config; older uses web_search_config + web_proxy
+    try:
+        _agent_kwargs["web_config"] = config.tools.web
+        agent = AgentLoop(**_agent_kwargs)
+    except TypeError:
+        del _agent_kwargs["web_config"]
+        _agent_kwargs["web_search_config"] = config.tools.web.search
+        _agent_kwargs["web_proxy"] = config.tools.web.proxy or None
+        agent = AgentLoop(**_agent_kwargs)
 
     # ------------------------------------------------------------------ cron
     async def on_cron_job(job: CronJob) -> str | None:
@@ -203,7 +213,7 @@ async def main(
         enabled=hb_cfg.enabled,
     )
 
-    container = ServiceContainer(
+    _svc_kwargs = dict(
         config=config,
         bus=bus,
         agent=agent,
@@ -212,8 +222,12 @@ async def main(
         cron=cron,
         heartbeat=heartbeat,
         make_provider=make_provider_patched,
-        webui_only=webui_only,
     )
+    try:
+        container = ServiceContainer(**_svc_kwargs, webui_only=webui_only)
+    except TypeError:
+        container = ServiceContainer(**_svc_kwargs)
+        container.webui_only = webui_only
 
     if channels.enabled_channels:
         logger.info("Channels enabled: {}", ", ".join(channels.enabled_channels))
