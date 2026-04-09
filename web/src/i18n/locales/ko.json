@@ -77,7 +77,10 @@
     "hideToolMessages": "도구 호출 세부 정보 숨기기",
     "uploading": "업로드 중...",
     "uploadFailed": "업로드 실패",
-    "searchSessions": "세션 검색..."
+    "searchSessions": "세션 검색...",
+    "revokeConfirmTitle": "메시지 취소",
+    "revokeConfirmDescription": "이 메시지와 이후의 모든 메시지가 삭제됩니다. 계속하시겠습니까?",
+    "messageRevoked": "메시지가 취소되었습니다"
   },
   "providers": {
     "title": "모델 제공자",
@@ -361,7 +364,34 @@
       "user": "사용자 환경 설정 및 개인화",
       "tools": "사용 가능한 도구 및 권한 설정",
       "heartbeat": "예약된 하트비트 작업 템플릿"
-    }
+    },
+    "webTools": "Web Tools",
+    "webEnable": "Enable Web Tools",
+    "webSearchProvider": "Search Provider",
+    "webSearchApiKey": "Search API Key",
+    "webSearchBaseUrl": "Search Base URL",
+    "webSearchMaxResults": "Max Search Results",
+    "webSearchTimeout": "Search Timeout (s)",
+    "webProxy": "HTTP/SOCKS5 Proxy",
+    "exec": "Command Execution",
+    "execEnable": "Enable Command Execution",
+    "execSandbox": "Sandbox Mode",
+    "execSandboxNone": "No sandbox",
+    "execSandboxBwrap": "Bubblewrap (bwrap)",
+    "execTimeout": "Execution Timeout (s)",
+    "pathAppend": "Append to PATH",
+    "restrictToWorkspace": "Restrict Access to Workspace",
+    "security": "Security",
+    "ssrfWhitelist": "SSRF Whitelist (CIDR)",
+    "ssrfWhitelistDesc": "CIDR ranges exempt from SSRF blocking, one per line",
+    "dream": "Dream Memory Consolidation",
+    "dreamIntervalH": "Consolidation Interval (hours)",
+    "dreamModelOverride": "Dedicated Model (optional)",
+    "dreamMaxBatchSize": "Max Batch Size",
+    "dreamMaxIterations": "Max Iterations",
+    "channelsConfig": "Channels Config",
+    "sendMaxRetries": "Max Send Retries",
+    "transcriptionProvider": "Voice Transcription Provider"
   },
   "s3": {
     "title": "S3 오브젝트 스토리지",

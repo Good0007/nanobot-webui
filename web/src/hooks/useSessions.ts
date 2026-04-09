@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "../lib/api";
 import i18n from "../i18n";
+import { useChatStore } from "../stores/chatStore";
 
 export interface SessionInfo {
   key: string;
@@ -58,10 +59,13 @@ export function useDeleteSession() {
 
 export function useRevokeMessage() {
   const qc = useQueryClient();
+  const revokeMessage = useChatStore((s) => s.revokeMessage);
   return useMutation({
     mutationFn: ({ key, index }: { key: string; index: number }) =>
       api.delete(`/sessions/${encodeURIComponent(key)}/messages/${index}`).then((r) => r.data),
     onSuccess: (_data, vars) => {
+      // Immediately remove from in-memory chat store (source of truth for the displayed messages)
+      revokeMessage(vars.index);
       qc.invalidateQueries({ queryKey: ["sessions", vars.key, "messages"] });
       qc.invalidateQueries({ queryKey: ["sessions"] });
       toast.success(i18n.t("chat.messageRevoked", "Message revoked"));

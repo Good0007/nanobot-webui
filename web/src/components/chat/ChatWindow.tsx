@@ -198,37 +198,10 @@ export function ChatWindow() {
       if (!currentSessionKey) return;
       const msg = messages.find((m) => m.id === messageId);
       if (!msg) return;
-
-      // serverIndex is stored when messages are loaded from the server in Chat.tsx.
-      // Locally-added messages (e.g. error bubbles) have no serverIndex and cannot be revoked.
       const serverIndex = msg.serverIndex;
       if (serverIndex === undefined) return;
-
       if (serverIndex >= 0) {
-        revokeMessage.mutate(
-          { key: currentSessionKey, index: serverIndex },
-          {
-            onSuccess: () => {
-              // Remove from local store immediately
-              const state = useChatStore.getState();
-              const idx = state.messages.findIndex((m) => m.id === messageId);
-              if (idx >= 0) {
-                const newMsgs = [...state.messages];
-                if (msg.role === "user") {
-                  // Also remove subsequent non-user messages
-                  let end = idx + 1;
-                  while (end < newMsgs.length && newMsgs[end].role !== "user") {
-                    end++;
-                  }
-                  newMsgs.splice(idx, end - idx);
-                } else {
-                  newMsgs.splice(idx, 1);
-                }
-                useChatStore.getState().setMessages(newMsgs);
-              }
-            },
-          }
-        );
+        revokeMessage.mutate({ key: currentSessionKey, index: serverIndex });
       }
     },
     [currentSessionKey, messages, revokeMessage]

@@ -16,14 +16,46 @@ from webui.utils import webui_config
 
 router = APIRouter()
 
-# All provider field names that exist on ProvidersConfig
-_PROVIDER_NAMES = [
-    "anthropic", "openai", "openrouter", "deepseek", "groq", "zhipu",
-    "dashscope", "vllm", "ollama", "gemini", "moonshot", "minimax", "aihubmix",
-    "siliconflow", "volcengine", "volcengine_coding_plan", "byteplus", 
-    "byteplus_coding_plan", "azure_openai", "custom", "openai_codex", 
-    "github_copilot",
-]
+# Derive provider names directly from the ProvidersConfig schema so
+# new providers added upstream are automatically included.
+_builtin_provider_names_cache: set[str] | None = None
+
+
+def _builtin_names() -> set[str]:
+    global _builtin_provider_names_cache
+    if _builtin_provider_names_cache is None:
+        _builtin_provider_names_cache = set(_get_builtin_provider_names())
+    return _builtin_provider_names_cache
+
+
+def _get_builtin_provider_names() -> list[str]:
+    """Return all field names from ProvidersConfig that map to a ProviderConfig."""
+    from nanobot.config.schema import ProvidersConfig, ProviderConfig
+    import pydantic
+
+    return [
+        name
+        for name, field_info in ProvidersConfig.model_fields.items()
+        if field_info.annotation is ProviderConfig
+        or (
+            hasattr(field_info.annotation, "__origin__") is False
+            and isinstance(field_info.default_factory, type)  # type: ignore[arg-type]
+        )
+        # Check that the field type resolves to ProviderConfig
+        or _is_provider_config_field(field_info)
+    ]
+
+
+def _is_provider_config_field(field_info) -> bool:
+    """Return True if the field's default_factory produces a ProviderConfig."""
+    from nanobot.config.schema import ProviderConfig
+    factory = field_info.default_factory
+    if factory is None:
+        return False
+    try:
+        return isinstance(factory(), ProviderConfig)
+    except Exception:
+        return False
 
 
 def _mask(value: str) -> str:
@@ -39,8 +71,8 @@ async def list_providers(
 ) -> list[ProviderInfo]:
     result = []
     
-    # 1. Built-in providers from nanobot core
-    for name in _PROVIDER_NAMES:
+    # 1. Built-in providers from nanobot core (registry-driven)
+    for name in _get_builtin_provider_names():
         p = getattr(svc.config.providers, name, None)
         if p is None:
             continue
@@ -81,7 +113,7 @@ async def create_custom_provider(
     _admin: Annotated[dict, Depends(require_admin)],
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> ProviderInfo:
-    if body.name in _PROVIDER_NAMES:
+    if body.name in _builtin_names():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Provider '{body.name}' is a built-in provider name")
         
     custom_providers = webui_config.get_custom_providers()
@@ -122,7 +154,7 @@ async def update_provider(
 
     is_custom = False
     
-    if name in _PROVIDER_NAMES:
+    if name in _builtin_names():
         p = getattr(svc.config.providers, name, None)
         if p is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Provider '{name}' not found")
@@ -183,7 +215,7 @@ async def delete_custom_provider(
     _admin: Annotated[dict, Depends(require_admin)],
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> dict:
-    if name in _PROVIDER_NAMES:
+    if name in _builtin_names():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Cannot delete built-in provider '{name}'")
         
     if not webui_config.delete_custom_provider(name):

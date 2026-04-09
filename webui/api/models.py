@@ -61,11 +61,25 @@ class AgentSettingsResponse(BaseModel):
     workspace: str
     restrict_to_workspace: bool
     exec_timeout: int
+    exec_enable: bool
+    exec_sandbox: str
     path_append: str
     web_search_api_key: str  # masked
     web_proxy: str | None
+    web_enable: bool
+    web_search_provider: str
+    web_search_base_url: str
+    web_search_max_results: int
+    web_search_timeout: int
+    ssrf_whitelist: list[str]
+    dream_interval_h: int
+    dream_model_override: str | None
+    dream_max_batch_size: int
+    dream_max_iterations: int
     send_progress: bool
     send_tool_hints: bool
+    channels_send_max_retries: int
+    channels_transcription_provider: str
 
 
 class AgentSettingsRequest(BaseModel):
@@ -79,11 +93,25 @@ class AgentSettingsRequest(BaseModel):
     workspace: str | None = None
     restrict_to_workspace: bool | None = None
     exec_timeout: int | None = None
+    exec_enable: bool | None = None
+    exec_sandbox: str | None = None
     path_append: str | None = None
     web_search_api_key: str | None = None
     web_proxy: str | None = None
+    web_enable: bool | None = None
+    web_search_provider: str | None = None
+    web_search_base_url: str | None = None
+    web_search_max_results: int | None = None
+    web_search_timeout: int | None = None
+    ssrf_whitelist: list[str] | None = None
+    dream_interval_h: int | None = None
+    dream_model_override: str | None = None
+    dream_max_batch_size: int | None = None
+    dream_max_iterations: int | None = None
     send_progress: bool | None = None
     send_tool_hints: bool | None = None
+    channels_send_max_retries: int | None = None
+    channels_transcription_provider: str | None = None
 
 
 class HeartbeatConfigModel(BaseModel):

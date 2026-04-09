@@ -12,8 +12,27 @@ export interface AgentSettings {
   context_window_tokens: number;
   reasoning_effort: string;
   workspace: string;
+  restrict_to_workspace?: boolean;
+  exec_timeout?: number;
+  exec_enable?: boolean;
+  exec_sandbox?: string;
+  path_append?: string;
+  web_search_api_key?: string;
+  web_proxy?: string | null;
+  web_enable?: boolean;
+  web_search_provider?: string;
+  web_search_base_url?: string;
+  web_search_max_results?: number;
+  web_search_timeout?: number;
+  ssrf_whitelist?: string[];
+  dream_interval_h?: number;
+  dream_model_override?: string | null;
+  dream_max_batch_size?: number;
+  dream_max_iterations?: number;
   send_progress?: boolean;
   send_tool_hints?: boolean;
+  channels_send_max_retries?: number;
+  channels_transcription_provider?: string;
 }
 
 export interface GatewayConfig {

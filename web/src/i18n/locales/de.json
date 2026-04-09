@@ -77,7 +77,10 @@
     "hideToolMessages": "Werkzeugaufruf-Details ausblenden",
     "uploading": "Wird hochgeladen...",
     "uploadFailed": "Hochladen fehlgeschlagen",
-    "searchSessions": "Sitzungen durchsuchen..."
+    "searchSessions": "Sitzungen durchsuchen...",
+    "revokeConfirmTitle": "Nachricht widerrufen",
+    "revokeConfirmDescription": "Dadurch werden diese Nachricht und alle nachfolgenden Nachrichten gelöscht. Fortfahren?",
+    "messageRevoked": "Nachricht widerrufen"
   },
   "providers": {
     "title": "Anbieter",
@@ -361,7 +364,34 @@
       "user": "Benutzerpräferenzen und Personalisierung",
       "tools": "Verfügbare Werkzeuge und Berechtigungseinstellungen",
       "heartbeat": "Geplante Heartbeat-Aufgabenvorlage"
-    }
+    },
+    "webTools": "Web Tools",
+    "webEnable": "Enable Web Tools",
+    "webSearchProvider": "Search Provider",
+    "webSearchApiKey": "Search API Key",
+    "webSearchBaseUrl": "Search Base URL",
+    "webSearchMaxResults": "Max Search Results",
+    "webSearchTimeout": "Search Timeout (s)",
+    "webProxy": "HTTP/SOCKS5 Proxy",
+    "exec": "Command Execution",
+    "execEnable": "Enable Command Execution",
+    "execSandbox": "Sandbox Mode",
+    "execSandboxNone": "No sandbox",
+    "execSandboxBwrap": "Bubblewrap (bwrap)",
+    "execTimeout": "Execution Timeout (s)",
+    "pathAppend": "Append to PATH",
+    "restrictToWorkspace": "Restrict Access to Workspace",
+    "security": "Security",
+    "ssrfWhitelist": "SSRF Whitelist (CIDR)",
+    "ssrfWhitelistDesc": "CIDR ranges exempt from SSRF blocking, one per line",
+    "dream": "Dream Memory Consolidation",
+    "dreamIntervalH": "Consolidation Interval (hours)",
+    "dreamModelOverride": "Dedicated Model (optional)",
+    "dreamMaxBatchSize": "Max Batch Size",
+    "dreamMaxIterations": "Max Iterations",
+    "channelsConfig": "Channels Config",
+    "sendMaxRetries": "Max Send Retries",
+    "transcriptionProvider": "Voice Transcription Provider"
   },
   "s3": {
     "title": "S3-Objektspeicher",

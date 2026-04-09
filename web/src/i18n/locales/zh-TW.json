@@ -77,7 +77,10 @@
     "hideToolMessages": "隱藏工具呼叫過程",
     "uploading": "上傳中...",
     "uploadFailed": "上傳失敗",
-    "searchSessions": "搜尋對話..."
+    "searchSessions": "搜尋對話...",
+    "revokeConfirmTitle": "撤回訊息",
+    "revokeConfirmDescription": "此操作將刪除此訊息及其後的所有訊息，確定繼續？",
+    "messageRevoked": "訊息已撤回"
   },
   "providers": {
     "title": "模型供應商",
@@ -361,7 +364,34 @@
       "user": "使用者偏好與個人化設定",
       "tools": "可用工具與權限設定",
       "heartbeat": "排程心跳任務範本"
-    }
+    },
+    "webTools": "Web Tools",
+    "webEnable": "Enable Web Tools",
+    "webSearchProvider": "Search Provider",
+    "webSearchApiKey": "Search API Key",
+    "webSearchBaseUrl": "Search Base URL",
+    "webSearchMaxResults": "Max Search Results",
+    "webSearchTimeout": "Search Timeout (s)",
+    "webProxy": "HTTP/SOCKS5 Proxy",
+    "exec": "Command Execution",
+    "execEnable": "Enable Command Execution",
+    "execSandbox": "Sandbox Mode",
+    "execSandboxNone": "No sandbox",
+    "execSandboxBwrap": "Bubblewrap (bwrap)",
+    "execTimeout": "Execution Timeout (s)",
+    "pathAppend": "Append to PATH",
+    "restrictToWorkspace": "Restrict Access to Workspace",
+    "security": "Security",
+    "ssrfWhitelist": "SSRF Whitelist (CIDR)",
+    "ssrfWhitelistDesc": "CIDR ranges exempt from SSRF blocking, one per line",
+    "dream": "Dream Memory Consolidation",
+    "dreamIntervalH": "Consolidation Interval (hours)",
+    "dreamModelOverride": "Dedicated Model (optional)",
+    "dreamMaxBatchSize": "Max Batch Size",
+    "dreamMaxIterations": "Max Iterations",
+    "channelsConfig": "Channels Config",
+    "sendMaxRetries": "Max Send Retries",
+    "transcriptionProvider": "Voice Transcription Provider"
   },
   "s3": {
     "title": "S3 物件儲存",

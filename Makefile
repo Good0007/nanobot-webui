@@ -10,6 +10,11 @@ PLATFORMS ?= linux/amd64,linux/arm64
 dev:
 	cd web && bun run dev
 
+# --- uv run webui ---
+.PHONY: server
+server:
+	uv run webui
+
 .PHONY: build-web
 build-web:
 	cd web && bun install --frozen-lockfile && bun run build

@@ -77,7 +77,10 @@
     "hideToolMessages": "Masquer les détails des appels d'outils",
     "uploading": "Téléversement en cours...",
     "uploadFailed": "Échec du téléversement",
-    "searchSessions": "Rechercher des sessions..."
+    "searchSessions": "Rechercher des sessions...",
+    "revokeConfirmTitle": "Révoquer le message",
+    "revokeConfirmDescription": "Cela supprimera ce message et tous les messages suivants. Continuer ?",
+    "messageRevoked": "Message révoqué"
   },
   "providers": {
     "title": "Fournisseurs",
@@ -361,7 +364,34 @@
       "user": "Préférences utilisateur et personnalisation",
       "tools": "Outils disponibles et configuration des autorisations",
       "heartbeat": "Modèle de tâche de heartbeat planifiée"
-    }
+    },
+    "webTools": "Web Tools",
+    "webEnable": "Enable Web Tools",
+    "webSearchProvider": "Search Provider",
+    "webSearchApiKey": "Search API Key",
+    "webSearchBaseUrl": "Search Base URL",
+    "webSearchMaxResults": "Max Search Results",
+    "webSearchTimeout": "Search Timeout (s)",
+    "webProxy": "HTTP/SOCKS5 Proxy",
+    "exec": "Command Execution",
+    "execEnable": "Enable Command Execution",
+    "execSandbox": "Sandbox Mode",
+    "execSandboxNone": "No sandbox",
+    "execSandboxBwrap": "Bubblewrap (bwrap)",
+    "execTimeout": "Execution Timeout (s)",
+    "pathAppend": "Append to PATH",
+    "restrictToWorkspace": "Restrict Access to Workspace",
+    "security": "Security",
+    "ssrfWhitelist": "SSRF Whitelist (CIDR)",
+    "ssrfWhitelistDesc": "CIDR ranges exempt from SSRF blocking, one per line",
+    "dream": "Dream Memory Consolidation",
+    "dreamIntervalH": "Consolidation Interval (hours)",
+    "dreamModelOverride": "Dedicated Model (optional)",
+    "dreamMaxBatchSize": "Max Batch Size",
+    "dreamMaxIterations": "Max Iterations",
+    "channelsConfig": "Channels Config",
+    "sendMaxRetries": "Max Send Retries",
+    "transcriptionProvider": "Voice Transcription Provider"
   },
   "s3": {
     "title": "Stockage d'objets S3",

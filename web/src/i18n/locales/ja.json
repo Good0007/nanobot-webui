@@ -77,7 +77,10 @@
     "hideToolMessages": "ツール呼び出しを非表示",
     "uploading": "アップロード中...",
     "uploadFailed": "アップロードに失敗しました",
-    "searchSessions": "セッションを検索..."
+    "searchSessions": "セッションを検索...",
+    "revokeConfirmTitle": "メッセージを取り消す",
+    "revokeConfirmDescription": "このメッセージとそれ以降のすべてのメッセージが削除されます。続けますか？",
+    "messageRevoked": "メッセージを取り消しました"
   },
   "providers": {
     "title": "プロバイダー",
@@ -361,7 +364,34 @@
       "user": "ユーザー設定とパーソナライゼーション",
       "tools": "利用可能なツールと権限設定",
       "heartbeat": "定期ハートビートタスクテンプレート"
-    }
+    },
+    "webTools": "Web Tools",
+    "webEnable": "Enable Web Tools",
+    "webSearchProvider": "Search Provider",
+    "webSearchApiKey": "Search API Key",
+    "webSearchBaseUrl": "Search Base URL",
+    "webSearchMaxResults": "Max Search Results",
+    "webSearchTimeout": "Search Timeout (s)",
+    "webProxy": "HTTP/SOCKS5 Proxy",
+    "exec": "Command Execution",
+    "execEnable": "Enable Command Execution",
+    "execSandbox": "Sandbox Mode",
+    "execSandboxNone": "No sandbox",
+    "execSandboxBwrap": "Bubblewrap (bwrap)",
+    "execTimeout": "Execution Timeout (s)",
+    "pathAppend": "Append to PATH",
+    "restrictToWorkspace": "Restrict Access to Workspace",
+    "security": "Security",
+    "ssrfWhitelist": "SSRF Whitelist (CIDR)",
+    "ssrfWhitelistDesc": "CIDR ranges exempt from SSRF blocking, one per line",
+    "dream": "Dream Memory Consolidation",
+    "dreamIntervalH": "Consolidation Interval (hours)",
+    "dreamModelOverride": "Dedicated Model (optional)",
+    "dreamMaxBatchSize": "Max Batch Size",
+    "dreamMaxIterations": "Max Iterations",
+    "channelsConfig": "Channels Config",
+    "sendMaxRetries": "Max Send Retries",
+    "transcriptionProvider": "Voice Transcription Provider"
   },
   "s3": {
     "title": "S3オブジェクトストレージ",

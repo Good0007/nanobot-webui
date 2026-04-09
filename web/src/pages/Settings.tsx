@@ -328,6 +328,35 @@ function AgentTab() {
   const [sendProgress, setSendProgress] = useState(true);
   const [sendToolHints, setSendToolHints] = useState(false);
 
+  // Web Tools state
+  const [webEnable, setWebEnable] = useState(true);
+  const [webSearchProvider, setWebSearchProvider] = useState("duckduckgo");
+  const [webSearchApiKey, setWebSearchApiKey] = useState("");
+  const [webSearchBaseUrl, setWebSearchBaseUrl] = useState("");
+  const [webSearchMaxResults, setWebSearchMaxResults] = useState("5");
+  const [webSearchTimeout, setWebSearchTimeout] = useState("30");
+  const [webProxy, setWebProxy] = useState("");
+
+  // Exec state
+  const [execEnable, setExecEnable] = useState(true);
+  const [execSandbox, setExecSandbox] = useState("");
+  const [execTimeout, setExecTimeout] = useState("60");
+  const [pathAppend, setPathAppend] = useState("");
+  const [restrictToWorkspace, setRestrictToWorkspace] = useState(false);
+
+  // Security state (one CIDR per line)
+  const [ssrfWhitelist, setSsrfWhitelist] = useState("");
+
+  // Dream Memory state
+  const [dreamIntervalH, setDreamIntervalH] = useState("2");
+  const [dreamModelOverride, setDreamModelOverride] = useState("");
+  const [dreamMaxBatchSize, setDreamMaxBatchSize] = useState("20");
+  const [dreamMaxIterations, setDreamMaxIterations] = useState("10");
+
+  // Channels state
+  const [sendMaxRetries, setSendMaxRetries] = useState("3");
+  const [transcriptionProvider, setTranscriptionProvider] = useState("groq");
+
   // [AI:START] tool=copilot date=2026-03-12 author=chenweikang
   // 获取当前选中提供商的模型列表（必须在 useState 之后）
   const selectedProviderModels = providers?.find(p => p.name === provider)?.models ?? [];
@@ -344,6 +373,30 @@ function AgentTab() {
     setWorkspace(agent.workspace ?? "");
     setSendProgress(agent.send_progress ?? true);
     setSendToolHints(agent.send_tool_hints ?? false);
+    // Web Tools
+    setWebEnable(agent.web_enable ?? true);
+    setWebSearchProvider(agent.web_search_provider ?? "duckduckgo");
+    setWebSearchApiKey(agent.web_search_api_key ?? "");
+    setWebSearchBaseUrl(agent.web_search_base_url ?? "");
+    setWebSearchMaxResults(String(agent.web_search_max_results ?? 5));
+    setWebSearchTimeout(String(agent.web_search_timeout ?? 30));
+    setWebProxy(agent.web_proxy ?? "");
+    // Exec
+    setExecEnable(agent.exec_enable ?? true);
+    setExecSandbox(agent.exec_sandbox ?? "");
+    setExecTimeout(String(agent.exec_timeout ?? 60));
+    setPathAppend(agent.path_append ?? "");
+    setRestrictToWorkspace(agent.restrict_to_workspace ?? false);
+    // Security
+    setSsrfWhitelist((agent.ssrf_whitelist ?? []).join("\n"));
+    // Dream
+    setDreamIntervalH(String(agent.dream_interval_h ?? 2));
+    setDreamModelOverride(agent.dream_model_override ?? "");
+    setDreamMaxBatchSize(String(agent.dream_max_batch_size ?? 20));
+    setDreamMaxIterations(String(agent.dream_max_iterations ?? 10));
+    // Channels
+    setSendMaxRetries(String(agent.channels_send_max_retries ?? 3));
+    setTranscriptionProvider(agent.channels_transcription_provider ?? "groq");
     setAgentInited(true);
   }
 
@@ -357,8 +410,54 @@ function AgentTab() {
       context_window_tokens: memoryWindow ? Number(memoryWindow) : undefined,
       reasoning_effort: reasoningEffort && reasoningEffort !== "__default__" ? reasoningEffort : undefined,
       workspace: workspace || undefined,
+    }, { onSuccess: () => toast.success(t("settings.saved")) });
+  };
+
+  const handleSaveWebTools = () => {
+    updateAgent.mutate({
+      web_enable: webEnable,
+      web_search_provider: webSearchProvider || undefined,
+      web_search_api_key: isMasked(webSearchApiKey) ? undefined : (webSearchApiKey || undefined),
+      web_search_base_url: webSearchBaseUrl || undefined,
+      web_search_max_results: webSearchMaxResults ? Number(webSearchMaxResults) : undefined,
+      web_search_timeout: webSearchTimeout ? Number(webSearchTimeout) : undefined,
+      web_proxy: webProxy || null,
+    }, { onSuccess: () => toast.success(t("settings.saved")) });
+  };
+
+  const handleSaveExec = () => {
+    updateAgent.mutate({
+      exec_enable: execEnable,
+      exec_sandbox: execSandbox,
+      exec_timeout: execTimeout ? Number(execTimeout) : undefined,
+      path_append: pathAppend,
+      restrict_to_workspace: restrictToWorkspace,
+    }, { onSuccess: () => toast.success(t("settings.saved")) });
+  };
+
+  const handleSaveSecurity = () => {
+    const list = ssrfWhitelist
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    updateAgent.mutate({ ssrf_whitelist: list }, { onSuccess: () => toast.success(t("settings.saved")) });
+  };
+
+  const handleSaveDream = () => {
+    updateAgent.mutate({
+      dream_interval_h: dreamIntervalH ? Number(dreamIntervalH) : undefined,
+      dream_model_override: dreamModelOverride || null,
+      dream_max_batch_size: dreamMaxBatchSize ? Number(dreamMaxBatchSize) : undefined,
+      dream_max_iterations: dreamMaxIterations ? Number(dreamMaxIterations) : undefined,
+    }, { onSuccess: () => toast.success(t("settings.saved")) });
+  };
+
+  const handleSaveChannels = () => {
+    updateAgent.mutate({
       send_progress: sendProgress,
       send_tool_hints: sendToolHints,
+      channels_send_max_retries: sendMaxRetries ? Number(sendMaxRetries) : undefined,
+      channels_transcription_provider: transcriptionProvider || undefined,
     }, { onSuccess: () => toast.success(t("settings.saved")) });
   };
 
@@ -464,21 +563,196 @@ function AgentTab() {
                   <Input value={workspace} onChange={(e) => setWorkspace(e.target.value)} />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch checked={sendProgress} onCheckedChange={setSendProgress} id="send-progress" />
-                  <Label htmlFor="send-progress">{t("settings.sendProgress")}</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch checked={sendToolHints} onCheckedChange={setSendToolHints} id="send-tool-hints" />
-                  <Label htmlFor="send-tool-hints">{t("settings.sendToolHints")}</Label>
-                </div>
-              </div>
               <div className="flex justify-end sm:justify-start">
                 <Button onClick={handleSaveAgent} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ── Web Tools card ─────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.webTools")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Switch checked={webEnable} onCheckedChange={setWebEnable} id="web-enable" />
+            <Label htmlFor="web-enable">{t("settings.webEnable")}</Label>
+          </div>
+          {webEnable && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("settings.webSearchProvider")}</Label>
+                <Select value={webSearchProvider} onValueChange={setWebSearchProvider}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["duckduckgo", "brave", "tavily", "searxng", "jina"].map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>{t("settings.webSearchApiKey")}</Label>
+                <SecretInput value={webSearchApiKey} onChange={setWebSearchApiKey} placeholder="API Key" />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("settings.webSearchBaseUrl")}</Label>
+                <Input value={webSearchBaseUrl} onChange={(e) => setWebSearchBaseUrl(e.target.value)} placeholder="https://searxng.example.com" />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("settings.webProxy")}</Label>
+                <Input value={webProxy} onChange={(e) => setWebProxy(e.target.value)} placeholder="http://127.0.0.1:7890" />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("settings.webSearchMaxResults")}</Label>
+                <Input type="number" min="1" max="20" value={webSearchMaxResults} onChange={(e) => setWebSearchMaxResults(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("settings.webSearchTimeout")}</Label>
+                <Input type="number" min="5" max="120" value={webSearchTimeout} onChange={(e) => setWebSearchTimeout(e.target.value)} />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end sm:justify-start">
+            <Button onClick={handleSaveWebTools} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Exec / Sandbox card ─────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.exec")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <div className="flex items-center gap-2">
+              <Switch checked={execEnable} onCheckedChange={setExecEnable} id="exec-enable" />
+              <Label htmlFor="exec-enable">{t("settings.execEnable")}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={restrictToWorkspace} onCheckedChange={setRestrictToWorkspace} id="restrict-ws" />
+              <Label htmlFor="restrict-ws">{t("settings.restrictToWorkspace")}</Label>
+            </div>
+          </div>
+          {execEnable && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("settings.execSandbox")}</Label>
+                <Select value={execSandbox || "__none__"} onValueChange={(v) => setExecSandbox(v === "__none__" ? "" : v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t("settings.execSandboxNone")}</SelectItem>
+                    <SelectItem value="bwrap">{t("settings.execSandboxBwrap")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>{t("settings.execTimeout")}</Label>
+                <Input type="number" min="1" value={execTimeout} onChange={(e) => setExecTimeout(e.target.value)} />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>{t("settings.pathAppend")}</Label>
+                <Input value={pathAppend} onChange={(e) => setPathAppend(e.target.value)} placeholder="/usr/local/bin:/opt/homebrew/bin" className="font-mono text-sm" />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end sm:justify-start">
+            <Button onClick={handleSaveExec} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Security / SSRF card ────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.security")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <Label>{t("settings.ssrfWhitelist")}</Label>
+            <Textarea
+              value={ssrfWhitelist}
+              onChange={(e) => setSsrfWhitelist(e.target.value)}
+              placeholder={"100.64.0.0/10\n192.168.0.0/16"}
+              className="font-mono text-xs h-24 resize-none"
+            />
+            <p className="text-xs text-muted-foreground">{t("settings.ssrfWhitelistDesc")}</p>
+          </div>
+          <div className="flex justify-end sm:justify-start">
+            <Button onClick={handleSaveSecurity} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Dream Memory card ───────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.dream")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>{t("settings.dreamIntervalH")}</Label>
+              <Input type="number" min="1" value={dreamIntervalH} onChange={(e) => setDreamIntervalH(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.dreamModelOverride")}</Label>
+              <Input value={dreamModelOverride} onChange={(e) => setDreamModelOverride(e.target.value)} placeholder={t("common.optional")} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.dreamMaxBatchSize")}</Label>
+              <Input type="number" min="1" value={dreamMaxBatchSize} onChange={(e) => setDreamMaxBatchSize(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.dreamMaxIterations")}</Label>
+              <Input type="number" min="1" value={dreamMaxIterations} onChange={(e) => setDreamMaxIterations(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end sm:justify-start">
+            <Button onClick={handleSaveDream} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Channels config card ────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.channelsConfig")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <div className="flex items-center gap-2">
+              <Switch checked={sendProgress} onCheckedChange={setSendProgress} id="send-progress" />
+              <Label htmlFor="send-progress">{t("settings.sendProgress")}</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={sendToolHints} onCheckedChange={setSendToolHints} id="send-tool-hints" />
+              <Label htmlFor="send-tool-hints">{t("settings.sendToolHints")}</Label>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>{t("settings.sendMaxRetries")}</Label>
+              <Input type="number" min="0" max="10" value={sendMaxRetries} onChange={(e) => setSendMaxRetries(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("settings.transcriptionProvider")}</Label>
+              <Select value={transcriptionProvider} onValueChange={setTranscriptionProvider}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="groq">Groq</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end sm:justify-start">
+            <Button onClick={handleSaveChannels} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
+          </div>
         </CardContent>
       </Card>
 

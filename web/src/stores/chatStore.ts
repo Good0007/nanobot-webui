@@ -50,6 +50,8 @@ interface ChatState {
   setWaiting: (v: boolean, sessionKey?: string) => void;
   clearMessages: () => void;
   setMessages: (msgs: ChatMessage[]) => void;
+  /** Remove messages by serverIndex (and all subsequent messages belonging to the same reply pair). */
+  revokeMessage: (serverIndex: number) => void;
   toggleToolMessages: () => void;
   /** Get waiting state for a specific session. */
   getSessionState: (key: string) => SessionState;
@@ -125,6 +127,15 @@ export const useChatStore = create<ChatState>()(
       clearMessages: () => set({ messages: [] }),
 
       setMessages: (messages) => set({ messages }),
+
+      revokeMessage: (serverIndex) =>
+        set((state) => {
+          // Find the position of the target message by serverIndex
+          const pos = state.messages.findIndex((m) => m.serverIndex === serverIndex);
+          if (pos === -1) return {};
+          // Remove the target message and all subsequent messages
+          return { messages: state.messages.slice(0, pos) };
+        }),
 
       toggleToolMessages: () =>
         set((state) => ({ showToolMessages: !state.showToolMessages })),
