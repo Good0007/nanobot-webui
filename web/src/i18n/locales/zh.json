@@ -77,7 +77,10 @@
     "hideToolMessages": "隐藏工具调用过程",
     "uploading": "上传中...",
     "uploadFailed": "上传失败",
-    "searchSessions": "搜索会话..."
+    "searchSessions": "搜索会话...",
+    "revokeConfirmTitle": "撤回消息",
+    "revokeConfirmDescription": "此操作将删除该消息及其之后的所有消息，确定继续？",
+    "messageRevoked": "消息已撤回"
   },
   "providers": {
     "title": "模型提供商",

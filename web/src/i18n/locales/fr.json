@@ -77,7 +77,10 @@
     "hideToolMessages": "Masquer les détails des appels d'outils",
     "uploading": "Téléversement en cours...",
     "uploadFailed": "Échec du téléversement",
-    "searchSessions": "Rechercher des sessions..."
+    "searchSessions": "Rechercher des sessions...",
+    "revokeConfirmTitle": "Révoquer le message",
+    "revokeConfirmDescription": "Cela supprimera ce message et tous les messages suivants. Continuer ?",
+    "messageRevoked": "Message révoqué"
   },
   "providers": {
     "title": "Fournisseurs",

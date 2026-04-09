@@ -2,12 +2,13 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/utils";
 import type { ChatMessage } from "../../stores/chatStore";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { useAuthStore } from "../../stores/authStore";
-import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Copy, Check, Undo2 } from "lucide-react";
+import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Copy, Check, Undo2, X } from "lucide-react";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -301,6 +302,8 @@ export function MessageBubble({ message, onRevoke }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const parts = splitThinking(message.content ?? "");
   const [copied, setCopied] = useState(false);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const { t } = useTranslation();
 
   const copyContent = () => {
     const text = message.content ?? "";
@@ -378,14 +381,31 @@ export function MessageBubble({ message, onRevoke }: MessageBubbleProps) {
             </button>
           )}
           {!message.isStreaming && onRevoke && (
-            <button
-              onClick={() => onRevoke(message.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-red-500 p-0.5 rounded"
-              aria-label="Revoke message"
-              title={isUser ? "Revoke message & response" : "Revoke message"}
-            >
-              <Undo2 className="h-3 w-3" />
-            </button>
+            confirmingRevoke ? (
+              <span className="flex items-center gap-1 text-[11px]">
+                <span className="text-muted-foreground/70">{t("chat.revokeConfirmTitle", "撤回?")}</span>
+                <button
+                  onClick={() => { setConfirmingRevoke(false); onRevoke(message.id); }}
+                  className="text-red-500 hover:text-red-600 font-medium px-0.5 rounded"
+                >
+                  {t("common.confirm")}
+                </button>
+                <button
+                  onClick={() => setConfirmingRevoke(false)}
+                  className="text-muted-foreground/50 hover:text-muted-foreground p-0.5 rounded"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmingRevoke(true)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/50 hover:text-red-500 p-0.5 rounded"
+                aria-label="Revoke message"
+              >
+                <Undo2 className="h-3 w-3" />
+              </button>
+            )
           )}
         </div>
       </div>

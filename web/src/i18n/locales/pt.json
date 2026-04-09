@@ -77,7 +77,10 @@
     "hideToolMessages": "Ocultar detalhes das chamadas de ferramenta",
     "uploading": "Enviando...",
     "uploadFailed": "Falha no envio",
-    "searchSessions": "Buscar sessões..."
+    "searchSessions": "Buscar sessões...",
+    "revokeConfirmTitle": "Revogar mensagem",
+    "revokeConfirmDescription": "Isso excluirá esta mensagem e todas as mensagens seguintes. Continuar?",
+    "messageRevoked": "Mensagem revogada"
   },
   "providers": {
     "title": "Provedores",

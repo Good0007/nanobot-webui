@@ -77,7 +77,10 @@
     "hideToolMessages": "Ocultar detalles de llamadas de herramienta",
     "uploading": "Subiendo...",
     "uploadFailed": "Error al subir",
-    "searchSessions": "Buscar sesiones..."
+    "searchSessions": "Buscar sesiones...",
+    "revokeConfirmTitle": "Revocar mensaje",
+    "revokeConfirmDescription": "Esto eliminará este mensaje y todos los mensajes posteriores. ¿Continuar?",
+    "messageRevoked": "Mensaje revocado"
   },
   "providers": {
     "title": "Proveedores",

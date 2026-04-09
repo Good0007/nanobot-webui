@@ -18,6 +18,16 @@ router = APIRouter()
 
 # Derive provider names directly from the ProvidersConfig schema so
 # new providers added upstream are automatically included.
+_builtin_provider_names_cache: set[str] | None = None
+
+
+def _builtin_names() -> set[str]:
+    global _builtin_provider_names_cache
+    if _builtin_provider_names_cache is None:
+        _builtin_provider_names_cache = set(_get_builtin_provider_names())
+    return _builtin_provider_names_cache
+
+
 def _get_builtin_provider_names() -> list[str]:
     """Return all field names from ProvidersConfig that map to a ProviderConfig."""
     from nanobot.config.schema import ProvidersConfig, ProviderConfig
@@ -103,7 +113,7 @@ async def create_custom_provider(
     _admin: Annotated[dict, Depends(require_admin)],
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> ProviderInfo:
-    if body.name in _PROVIDER_NAMES:
+    if body.name in _builtin_names():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Provider '{body.name}' is a built-in provider name")
         
     custom_providers = webui_config.get_custom_providers()
@@ -144,7 +154,7 @@ async def update_provider(
 
     is_custom = False
     
-    if name in _PROVIDER_NAMES:
+    if name in _builtin_names():
         p = getattr(svc.config.providers, name, None)
         if p is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Provider '{name}' not found")
@@ -205,7 +215,7 @@ async def delete_custom_provider(
     _admin: Annotated[dict, Depends(require_admin)],
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> dict:
-    if name in _PROVIDER_NAMES:
+    if name in _builtin_names():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Cannot delete built-in provider '{name}'")
         
     if not webui_config.delete_custom_provider(name):

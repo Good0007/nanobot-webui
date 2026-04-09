@@ -77,7 +77,10 @@
     "hideToolMessages": "Werkzeugaufruf-Details ausblenden",
     "uploading": "Wird hochgeladen...",
     "uploadFailed": "Hochladen fehlgeschlagen",
-    "searchSessions": "Sitzungen durchsuchen..."
+    "searchSessions": "Sitzungen durchsuchen...",
+    "revokeConfirmTitle": "Nachricht widerrufen",
+    "revokeConfirmDescription": "Dadurch werden diese Nachricht und alle nachfolgenden Nachrichten gelöscht. Fortfahren?",
+    "messageRevoked": "Nachricht widerrufen"
   },
   "providers": {
     "title": "Anbieter",

@@ -77,7 +77,10 @@
     "hideToolMessages": "Hide tool call details",
     "uploading": "Uploading...",
     "uploadFailed": "Upload failed",
-    "searchSessions": "Search sessions..."
+    "searchSessions": "Search sessions...",
+    "revokeConfirmTitle": "Revoke Message",
+    "revokeConfirmDescription": "This will delete this message and all subsequent messages. Continue?",
+    "messageRevoked": "Message revoked"
   },
   "providers": {
     "title": "Providers",

@@ -77,7 +77,10 @@
     "hideToolMessages": "도구 호출 세부 정보 숨기기",
     "uploading": "업로드 중...",
     "uploadFailed": "업로드 실패",
-    "searchSessions": "세션 검색..."
+    "searchSessions": "세션 검색...",
+    "revokeConfirmTitle": "메시지 취소",
+    "revokeConfirmDescription": "이 메시지와 이후의 모든 메시지가 삭제됩니다. 계속하시겠습니까?",
+    "messageRevoked": "메시지가 취소되었습니다"
   },
   "providers": {
     "title": "모델 제공자",

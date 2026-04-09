@@ -105,17 +105,9 @@ async def revoke_message(
     if index < 0 or index >= len(session.messages):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid message index")
 
-    removed = session.messages[index]
-    if removed.get("role") == "user":
-        # Remove user message and all subsequent non-user messages (the response pair)
-        end = index + 1
-        while end < len(session.messages) and session.messages[end].get("role") != "user":
-            end += 1
-        count = end - index
-        del session.messages[index:end]
-    else:
-        count = 1
-        del session.messages[index]
+    # Remove the target message and all subsequent messages
+    count = len(session.messages) - index
+    del session.messages[index:]
 
     from datetime import datetime
     session.updated_at = datetime.now()

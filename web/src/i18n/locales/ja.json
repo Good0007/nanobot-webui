@@ -77,7 +77,10 @@
     "hideToolMessages": "ツール呼び出しを非表示",
     "uploading": "アップロード中...",
     "uploadFailed": "アップロードに失敗しました",
-    "searchSessions": "セッションを検索..."
+    "searchSessions": "セッションを検索...",
+    "revokeConfirmTitle": "メッセージを取り消す",
+    "revokeConfirmDescription": "このメッセージとそれ以降のすべてのメッセージが削除されます。続けますか？",
+    "messageRevoked": "メッセージを取り消しました"
   },
   "providers": {
     "title": "プロバイダー",
