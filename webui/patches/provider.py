@@ -19,7 +19,7 @@ def make_provider_patched(config):
     - Adds support for custom providers from webui_config.json
     """
     import sys
-    from nanobot.providers.registry import find_by_name
+    from nanobot.providers.registr8y import find_by_name
     from webui.utils.webui_config import get_custom_providers
 
     model: str = config.agents.defaults.model
