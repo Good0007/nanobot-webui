@@ -25,9 +25,6 @@ def _apply_patches() -> None:
     _apply_all_patches()
 
 
-_apply_patches()
-
-
 def _is_default_workspace(workspace: Path | None) -> bool:
     """Return whether a workspace resolves to nanobot's default workspace path."""
     current = workspace if workspace is not None else Path.home() / ".nanobot" / "workspace"
@@ -42,6 +39,8 @@ async def main(
     log_level: str = "DEBUG",
     webui_only: bool = False,
 ) -> None:
+    _apply_patches()
+
     import sys as _sys
     from loguru import logger
 
@@ -272,57 +271,9 @@ async def main(
 
 
 def main_cli() -> None:
-    """Entry point for the ``nanobot-webui`` console script."""
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        prog="nanobot-webui",
-        description="nanobot WebUI — start WebUI + gateway in one process",
-    )
-    parser.add_argument(
-        "command",
-        nargs="?",
-        default="start",
-        choices=["start"],
-        help="Compatibility alias. 'start' may be omitted.",
-    )
-    parser.add_argument("--port", type=int, default=18780, help="WebUI port (default: 18780)")
-    parser.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
-    parser.add_argument("--workspace", default=None, help="Override workspace directory")
-    parser.add_argument("--config", default=None, dest="config_path",
-                        help="Path to config file")
-    parser.add_argument("--daemon", "-d", action="store_true", default=False,
-                        help="Run in the background (PID → ~/.nanobot/webui.pid)")
-    parser.add_argument("--log-level", default="DEBUG", dest="log_level",
-                        metavar="LEVEL",
-                        help="Log level: DEBUG, INFO, WARNING, ERROR (default: DEBUG)")
-    parser.add_argument("--webui-only", action="store_true", default=False,
-                        dest="webui_only",
-                        help="Start only the WebUI HTTP server (no IM channels / heartbeat). "
-                             "Use this when nanobot is already running as a separate process.")
-    args = parser.parse_args()
-
-    if args.daemon:
-        from webui.cli import _start_daemon
-        _start_daemon(
-            port=args.port,
-            host=args.host,
-            workspace=args.workspace,
-            config_path=args.config_path,
-        )
-        return
-
-    if args.config_path:
-        from nanobot.config.loader import set_config_path
-        set_config_path(Path(args.config_path).expanduser().resolve())
-
-    asyncio.run(main(
-        web_port=args.port,
-        web_host=args.host,
-        workspace=args.workspace,
-        log_level=args.log_level,
-        webui_only=args.webui_only,
-    ))
+    """Entry point for ``nanobot-webui`` and ``webui`` scripts."""
+    from webui.cli import run_webui
+    run_webui()
 
 
 if __name__ == "__main__":

@@ -45,9 +45,9 @@ dev = [
 ]
 
 [project.scripts]
-webui = "webui.__main__:main_cli"
-nanobot-webui = "webui.__main__:main_cli"
 nanobot = "webui.cli:run_nanobot"
+webui = "webui.cli:run_webui"
+nanobot-webui = "webui.cli:run_webui"
 
 [tool.setuptools.packages.find]
 where = ["."]

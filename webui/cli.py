@@ -1,15 +1,17 @@
-"""
-Inject a ``webui`` sub-command into the nanobot Typer CLI.
+"""CLI integration for nanobot-webui.
 
-After installing nanobot-webui the user can run:
+Preferred entrypoints:
 
-    nanobot webui                     # start webui + gateway on default ports
-    nanobot webui --port 9090         # custom WebUI port
-    nanobot webui --workspace ~/work  # override workspace
+    nanobot-webui start
+    webui start
 
-The original ``nanobot`` entry point is shadowed by this module so that the
-webui sub-command appears alongside the built-in ones (gateway, agent, onboard).
-All existing commands continue to work unchanged.
+Compatibility entrypoint (only when this module is explicitly used as the
+``nanobot`` command target):
+
+    nanobot webui start
+
+The package also keeps ``nanobot webui`` for backward compatibility with
+existing users.
 """
 
 from __future__ import annotations
@@ -129,6 +131,7 @@ webui_app = typer.Typer(
     name="webui",
     help="Manage the nanobot WebUI.",
     no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 app.add_typer(webui_app, name="webui")
 
@@ -366,7 +369,6 @@ def _start_daemon(
     webui_only: bool = False,
 ) -> None:
     """Spawn a detached nanobot-webui process and record its PID."""
-    import shutil
     import subprocess
 
     # Check for an already-running instance
@@ -380,9 +382,9 @@ def _start_daemon(
         typer.echo("Stop it first with:  kill " + str(old_pid))
         raise typer.Exit(1)
 
-    # Build the child command — invoke `nanobot webui start` (foreground, no -d)
-    nanobot_exe = shutil.which("nanobot") or sys.argv[0]
-    cmd: list[str] = [nanobot_exe, "webui", "start", "--port", str(port), "--host", host]
+    # Build the child command — use module execution for stable behavior
+    # across environments (no reliance on `nanobot` entrypoint shadowing).
+    cmd: list[str] = [sys.executable, "-m", "webui", "start", "--port", str(port), "--host", host]
     if workspace:
         cmd += ["--workspace", workspace]
     if config_path:
@@ -411,7 +413,7 @@ def _start_daemon(
     typer.echo(f"\u2713 nanobot WebUI started in background (PID {proc.pid})")
     typer.echo(f"  URL : http://localhost:{port}")
     typer.echo(f"  Log : {log}")
-    typer.echo("  Stop: nanobot webui stop")
+    typer.echo("  Stop: nanobot-webui stop")
 
 
 # ── Entry points ─────────────────────────────────────────────────────────────
@@ -422,43 +424,23 @@ def run_nanobot() -> None:
 
 
 def run_webui() -> None:
-    """Entry point for the standalone ``nanobot-webui`` command."""
-    parser = _make_standalone_parser()
-    args = parser.parse_args()
-    asyncio.run(
-        _run_all_from_args(args)
-    )
+    """Entry point for standalone ``nanobot-webui`` / ``webui`` commands.
 
+    Uses the same Typer subcommands as ``nanobot webui`` to keep behavior
+    consistent across all entrypoints.
+    """
+    argv = sys.argv[1:]
 
-def _make_standalone_parser():
-    import argparse
-    p = argparse.ArgumentParser(
-        prog="nanobot-webui",
-        description="nanobot WebUI — start WebUI + gateway in one process",
-    )
-    p.add_argument("--port", type=int, default=18780, help="WebUI port (default: 18780)")
-    p.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
-    p.add_argument("--workspace", default=None, help="Override workspace directory")
-    p.add_argument("--config", default=None, dest="config_path",
-                   help="Path to config file")
-    p.add_argument("--log-level", default="DEBUG", dest="log_level",
-                   metavar="LEVEL",
-                   help="Log level: DEBUG, INFO, WARNING, ERROR (default: DEBUG)")
-    return p
+    # Backward compatibility:
+    #   nanobot-webui --port 18780  -> nanobot-webui start --port 18780
+    # Keep top-level/global options intact.
+    top_level_options = {
+        "-h",
+        "--help",
+        "--install-completion",
+        "--show-completion",
+    }
+    if argv and argv[0].startswith("-") and argv[0] not in top_level_options:
+        argv = ["start", *argv]
 
-
-async def _run_all_from_args(args) -> None:
-    from webui.__main__ import _apply_patches, main as _run_all
-    _apply_patches()
-
-    if args.config_path:
-        from nanobot.config.loader import set_config_path
-        from pathlib import Path
-        set_config_path(Path(args.config_path).expanduser().resolve())
-
-    await _run_all(
-        web_port=args.port,
-        web_host=args.host,
-        workspace=args.workspace,
-        log_level=getattr(args, "log_level", "DEBUG"),
-    )
+    webui_app(args=argv, prog_name=(Path(sys.argv[0]).name or "nanobot-webui"))

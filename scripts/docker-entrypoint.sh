@@ -30,25 +30,16 @@ if [ "${WEBUI_ONLY}" = "true" ]; then
     ARGS="${ARGS} --webui-only"
 fi
 
-# Version comparison: pick the right entrypoint
-# v0.2.5 and below use `python -m webui`; v0.2.6+ use `nanobot webui start`
-MAJOR=$(echo "$VERSION" | cut -d. -f1)
-MINOR=$(echo "$VERSION" | cut -d. -f2)
-PATCH=$(echo "$VERSION" | cut -d. -f3 | cut -d. -f1)  # strip .postN
-
-use_new_cli=0
-if [ "$MAJOR" -gt 0 ]; then
-    use_new_cli=1
-elif [ "$MAJOR" -eq 0 ] && [ "$MINOR" -gt 2 ]; then
-    use_new_cli=1
-elif [ "$MAJOR" -eq 0 ] && [ "$MINOR" -eq 2 ] && [ "$PATCH" -gt 5 ]; then
-    use_new_cli=1
+# Prefer the dedicated command first, keep backward-compatible fallbacks.
+if command -v nanobot-webui >/dev/null 2>&1; then
+    echo "[entrypoint] nanobot-webui start ${ARGS}"
+    exec nanobot-webui start ${ARGS}
 fi
 
-if [ "$use_new_cli" -eq 1 ]; then
+if command -v nanobot >/dev/null 2>&1; then
     echo "[entrypoint] nanobot webui start ${ARGS}"
     exec nanobot webui start ${ARGS}
-else
-    echo "[entrypoint] python -m webui ${ARGS}"
-    exec python -m webui ${ARGS}
 fi
+
+echo "[entrypoint] python -m webui ${ARGS}"
+exec python -m webui ${ARGS}

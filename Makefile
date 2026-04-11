@@ -4,6 +4,8 @@
 IMAGE   ?= kangkang223/nanobot-webui
 TAG     ?= latest
 PLATFORMS ?= linux/amd64,linux/arm64
+VERSION ?= $(shell awk -F'"' '/^version = "/ {print $$2; exit}' pyproject.toml)
+PIP_INDEX_URL ?= https://pypi.org/simple/
 
 # ── Local dev ─────────────────────────────────
 .PHONY: dev
@@ -34,7 +36,11 @@ dist-wheel: build-web
 # ── Docker (single-platform, local) ───────────
 .PHONY: build
 build:
-	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):$(TAG) .
+	@echo "Building $(IMAGE):$(TAG) with package version $(VERSION)"
+	docker build \
+	 --build-arg VERSION=$(VERSION)\
+	 --build-arg PIP_INDEX_URL=$(PIP_INDEX_URL)\
+	 -t $(IMAGE):$(TAG) .
 
 .PHONY: up
 up:
@@ -72,30 +78,16 @@ push-latest: push
 # Usage: make release VERSION=0.1.2
 .PHONY: release
 release:
-ifndef VERSION
-	@echo "Error: VERSION is required. Usage: make release VERSION=0.1.2"
-	@exit 1
-endif
 	@echo "Releasing version $(VERSION)..."
 	docker buildx build \
 		--platform $(PLATFORMS) \
 		--build-arg VERSION=$(VERSION) \
+		--build-arg PIP_INDEX_URL=$(PIP_INDEX_URL) \
 		--tag $(IMAGE):$(VERSION) \
 		--tag $(IMAGE):latest \
 		--push \
 		.
 	@echo "Docker images $(IMAGE):$(VERSION) and $(IMAGE):latest pushed successfully"
-
-# Build & push with a date-based tag (e.g. 2026-03-11) AND update latest
-.PHONY: release-dated
-release-dated:
-	$(eval DATE := $(shell date +%Y-%m-%d))
-	docker buildx build \
-		--platform $(PLATFORMS) \
-		--tag $(IMAGE):$(DATE) \
-		--tag $(IMAGE):latest \
-		--push \
-		.
 
 # ── Python PyPI publish ───────────────────────
 .PHONY: build-py
@@ -137,15 +129,16 @@ help:
 	@echo "  make restart        docker compose restart"
 	@echo ""
 	@echo "  make push           Build & push multi-arch image ($(PLATFORMS))"
-	@echo "  make release VERSION=x  Create git tag vX, build & push :x and :latest"
-	@echo "  make release-dated  Build & push :YYYY-MM-DD and :latest"
+	@echo "  make release        Build & push :VERSION and :latest (VERSION defaults to pyproject.toml)"
+	@echo "  make release VERSION=x  Override default VERSION"
 	@echo ""
 	@echo "  make build-py       Build Python package (wheel + sdist)"
 	@echo "  make publish        Publish to PyPI (requires .pypirc)"
 	@echo "  make publish-test   Publish to Test PyPI (requires .pypirc)"
 	@echo "  make test-release   Publish to TestPyPI → install → smoke test"
-	@echo "  make release-all VERSION=x  Publish PyPI + Docker + create git tag"
+	@echo "  make release-all    Publish PyPI + Docker (VERSION defaults to pyproject.toml)"
+	@echo "  make release-all VERSION=x  Override default VERSION"
 	@echo ""
 	@echo "  Override defaults:"
-	@echo "    IMAGE=$(IMAGE)  TAG=$(TAG)"
+	@echo "    IMAGE=$(IMAGE)  TAG=$(TAG)  VERSION=$(VERSION)  PIP_INDEX_URL=$(PIP_INDEX_URL)"
 	@echo ""
