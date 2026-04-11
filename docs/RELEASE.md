@@ -1,5 +1,41 @@
 # Release Notes
 
+## v0.2.7.post3 — 2026-04-11
+
+**Direct Changes from `v0.2.7` to `v0.2.7.post3`**
+
+This post-release series includes three functional updates plus packaging and compatibility fixes:
+
+- **Chat Input (Mobile UX) Improvements**
+	- Enhanced `ChatInput` mobile behavior: Enter key no longer submits on mobile by default, reduced input/button sizing, and refined spacing.
+	- Moved "show/hide tool messages" into a compact dropdown menu and optimized the status indicator area for small screens.
+	- Improved send/stop button behavior for mobile icon mode to reduce accidental interactions.
+
+- **Session Deletion & Message State Fixes**
+	- Fixed stale cache issues after deleting sessions by explicitly clearing per-session message/memory queries.
+	- Updated message reload conditions to handle both message count increases and decreases (important when a session is deleted/recreated with the same key).
+	- Preserved locally generated assistant error messages (e.g., `⚠️`) during history reloads so transient error context is not lost.
+
+- **Cross-Platform Exec & Feishu Compatibility**
+	- Added a temporary `exec_windows` patch to backport Windows-safe ExecTool behavior for `nanobot-ai==0.1.5`:
+		- use `cmd.exe /c` on Windows,
+		- build platform-appropriate subprocess environment,
+		- apply `PATH` updates with Windows semantics,
+		- skip Linux-only sandbox wrapping on Windows.
+	- Improved daemon/process handling on Windows by falling back to `SIGTERM` when `SIGKILL` is unavailable.
+	- Improved `webui logs` to work without external `tail`, enabling cross-platform log following.
+	- Patched Feishu channel startup to gracefully degrade when `lark_oapi` lacks `bot.v3` modules, preventing channel startup failures.
+
+- **API/Packaging & Dependency Stabilization (post1 → post3)**
+  - Added missing build/publish tooling (`build`, `twine`) to `dev` extras.
+  - Refined FastAPI 204 routes with explicit `response_model=None` + `Response` class to avoid no-content response model inconsistencies.
+  - Added `webui` command entrypoint alias (`webui = webui.__main__:main_cli`) and a compatibility optional positional `start` command.
+  - Tightened runtime dependency versions for better reproducibility.
+  - Adjusted `bcrypt` from pinned `4.1.0` to `>=4.1.1,<5.0.0` for compatibility.
+  - Updated Dockerfile default install version to `0.2.7.post3` and switched install index to official PyPI.
+
+---
+
 ## v0.2.7 — 2026-04-09
 
 **Upgrade to `nanobot-ai v0.1.5`**
