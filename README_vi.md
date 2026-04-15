@@ -1,6 +1,6 @@
 # Nanobot WebUI
 
-**Tiếng Việt** \| [中文](README_zh.md) \| [English(README.md)
+**Tiếng Việt** \| [中文](README_zh.md) \| [English](README.md)
 
 ------------------------------------------------------------------------
 
