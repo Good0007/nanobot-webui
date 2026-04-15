@@ -80,7 +80,7 @@ const detectLanguage = (): string => {
     return "es";
   } else if (
     timezone.includes("Asia/Ho_Chi_Minh") ||
-    timezone.includes("Asia/Hanoi") ||)
+    timezone.includes("Asia/Hanoi")
   ) {
     return "vi";
   }
