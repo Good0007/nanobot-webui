@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   useChannels, useUpdateChannel, useReloadChannel, useReloadAllChannels, useToggleChannel,
@@ -132,6 +133,7 @@ function WeixinQrPanel({ loggedIn, onLoginSuccess }: { loggedIn: boolean; onLogi
 export default function Channels() {
   const { t } = useTranslation();
   const { data: channels, isLoading } = useChannels();
+  const qc = useQueryClient();
   const update = useUpdateChannel();
   const reload = useReloadChannel();
   const reloadAll = useReloadAllChannels();
@@ -246,7 +248,7 @@ export default function Channels() {
                     {ch.name === "weixin" && (
                       <WeixinQrPanel
                         loggedIn={ch.config?.loggedIn === true}
-                        onLoginSuccess={() => reload.mutate(ch.name)}
+                        onLoginSuccess={() => qc.invalidateQueries({ queryKey: ["channels"] })}
                       />
                     )}
 
