@@ -61,7 +61,7 @@
 | **PWA 支持** | 可安装为桌面 / 主屏幕应用；后台自动检测新版本并提示一键更新 |
 | **移动端适配** | 响应式布局，针对 iOS Safari 键盘弹出做专项适配，确保输入框始终可见 |
 | **深色模式** | 亮色 / 暗色一键切换，首次访问自动跟随系统偏好；暗色方案采用暖色调以匹配品牌色 |
-| **多语言（i18n）** | 内置 7 套界面语言：中文、繁體中文、English、日本語、한국어、Deutsch、Français，自动根据浏览器语言 / 时区检测，支持子菜单实时切换 |
+| **多语言（i18n）** | 内置 9 套界面语言：中文、繁體中文、English、日本語、한국어、Deutsch、Français、Português、Español，自动根据浏览器语言 / 时区检测，支持子菜单实时切换 |
 
 ---
 
@@ -378,7 +378,7 @@ nanobot-webui/
 │   │       ├── users.py        #   CRUD /api/users（仅管理员）
 │   │       └── ws.py           #   WebSocket /ws/chat
 │   ├── patches/                # 最小化运行时 monkey-patch（非侵入式）
-│   │   ├── channels.py         #   空 allow_from → 允许所有人
+│   │   ├── channels.py         #   allow_from: "*" → 允许所有（与 nanobot 一致）
 │   │   ├── mcp_dynamic.py      #   MCP 服务器动态启用/禁用
 │   │   ├── provider.py         #   提供商热重载支持
 │   │   ├── session.py          #   会话持久化调整
@@ -389,8 +389,17 @@ nanobot-webui/
 ├── web/                        # React 18 + TypeScript 前端源码
 │   ├── src/
 │   │   ├── pages/              # 每个路由对应一个页面组件
+│   │   │   ├── Chat.tsx        #   实时对话页
 │   │   │   ├── Channels.tsx    #   IM 通道配置（含微信扫码登录）
-│   │   │   └── ...             #   Chat / Dashboard / Settings 等
+│   │   │   ├── CronJobs.tsx    #   定时任务
+│   │   │   ├── Dashboard.tsx   #   概览与统计
+│   │   │   ├── Login.tsx       #   认证
+│   │   │   ├── MCPServers.tsx  #   MCP 工具服务器
+│   │   │   ├── Settings.tsx    #   Agent / 提供商 / 工作区设置
+│   │   │   ├── Skills.tsx      #   技能管理
+│   │   │   ├── SystemConfig.tsx#   系统级配置
+│   │   │   ├── Tools.tsx       #   可用工具浏览
+│   │   │   └── Users.tsx       #   用户管理（仅管理员）
 │   │   ├── components/         # 布局、聊天、通用 UI 组件
 │   │   ├── hooks/              # TanStack Query 数据钩子
 │   │   ├── stores/             # Zustand 状态（认证、聊天）
@@ -433,7 +442,7 @@ nanobot-webui/
 | UI 组件 | shadcn/ui + Tailwind CSS v3 |
 | 客户端状态 | Zustand（含持久化中间件） |
 | 服务端状态 | TanStack Query v5 |
-| 国际化 | react-i18next（中 / 英） |
+| 国际化 | react-i18next（9 种界面语言） |
 | 主题 | next-themes（亮色 / 暗色 / 跟随系统） |
 | 实时通信 | WebSocket（`/ws/chat`） |
 | 包管理器 | Bun |

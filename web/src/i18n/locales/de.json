@@ -80,7 +80,15 @@
     "searchSessions": "Sitzungen durchsuchen...",
     "revokeConfirmTitle": "Nachricht widerrufen",
     "revokeConfirmDescription": "Dadurch werden diese Nachricht und alle nachfolgenden Nachrichten gelöscht. Fortfahren?",
-    "messageRevoked": "Nachricht widerrufen"
+    "messageRevoked": "Nachricht widerrufen",
+    "artifact": {
+      "loading": "Wird geladen…",
+      "retry": "Erneut versuchen",
+      "loadError": "Datei konnte nicht geladen werden. Bitte prüfen Sie, ob die Datei existiert",
+      "openExternal": "In neuem Tab öffnen",
+      "download": "Datei herunterladen",
+      "unsupported": "Dieser Dateityp wird für die Vorschau nicht unterstützt. Verwenden Sie die Download-Schaltfläche oben."
+    }
   },
   "providers": {
     "title": "Anbieter",

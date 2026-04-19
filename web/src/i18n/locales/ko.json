@@ -80,7 +80,15 @@
     "searchSessions": "세션 검색...",
     "revokeConfirmTitle": "메시지 취소",
     "revokeConfirmDescription": "이 메시지와 이후의 모든 메시지가 삭제됩니다. 계속하시겠습니까?",
-    "messageRevoked": "메시지가 취소되었습니다"
+    "messageRevoked": "메시지가 취소되었습니다",
+    "artifact": {
+      "loading": "불러오는 중…",
+      "retry": "다시 시도",
+      "loadError": "파일을 불러올 수 없습니다. 파일이 존재하는지 확인하세요",
+      "openExternal": "새 탭에서 열기",
+      "download": "파일 다운로드",
+      "unsupported": "이 파일 형식은 미리보기를 지원하지 않습니다. 위의 다운로드 버튼을 사용하세요."
+    }
   },
   "providers": {
     "title": "모델 제공자",

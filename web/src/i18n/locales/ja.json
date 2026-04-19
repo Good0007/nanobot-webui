@@ -80,7 +80,15 @@
     "searchSessions": "セッションを検索...",
     "revokeConfirmTitle": "メッセージを取り消す",
     "revokeConfirmDescription": "このメッセージとそれ以降のすべてのメッセージが削除されます。続けますか？",
-    "messageRevoked": "メッセージを取り消しました"
+    "messageRevoked": "メッセージを取り消しました",
+    "artifact": {
+      "loading": "読み込み中…",
+      "retry": "再試行",
+      "loadError": "ファイルを読み込めませんでした。ファイルが存在するか確認してください",
+      "openExternal": "新しいタブで開く",
+      "download": "ファイルをダウンロード",
+      "unsupported": "このファイル形式はプレビューに対応していません。上のダウンロードボタンを使用してください。"
+    }
   },
   "providers": {
     "title": "プロバイダー",

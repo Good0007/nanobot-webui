@@ -80,7 +80,15 @@
     "searchSessions": "Rechercher des sessions...",
     "revokeConfirmTitle": "Révoquer le message",
     "revokeConfirmDescription": "Cela supprimera ce message et tous les messages suivants. Continuer ?",
-    "messageRevoked": "Message révoqué"
+    "messageRevoked": "Message révoqué",
+    "artifact": {
+      "loading": "Chargement…",
+      "retry": "Réessayer",
+      "loadError": "Impossible de charger le fichier, vérifiez qu'il existe",
+      "openExternal": "Ouvrir dans un nouvel onglet",
+      "download": "Télécharger le fichier",
+      "unsupported": "Ce type de fichier n'est pas pris en charge pour la prévisualisation. Utilisez le bouton de téléchargement ci-dessus."
+    }
   },
   "providers": {
     "title": "Fournisseurs",

@@ -72,6 +72,11 @@ export default function Chat() {
         timestamp: m.timestamp ?? new Date().toISOString(),
         name: m.name ?? undefined,
         serverIndex: m._serverIdx,
+        toolCalls: m.tool_calls?.map((tc) => ({
+          id: tc.id,
+          name: tc.function?.name ?? "",
+          input: tc.function?.arguments,
+        })),
       }));
     // Preserve locally-added messages not present in server data.
     // LLM errors are intentionally NOT saved to session by nanobot, so they must

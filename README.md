@@ -380,7 +380,7 @@ nanobot-webui/
 │   │       ├── users.py        #   CRUD /api/users  (admin only)
 │   │       └── ws.py           #   WebSocket /ws/chat
 │   ├── patches/                # Minimal runtime monkey-patches (non-invasive)
-│   │   ├── channels.py         #   Empty allow_from → allow all
+│   │   ├── channels.py         #   allow_from: "*" → allow all (nanobot convention)
 │   │   ├── mcp_dynamic.py      #   Dynamic MCP server enable/disable
 │   │   ├── provider.py         #   Provider hot-reload support
 │   │   ├── session.py          #   Session persistence tweaks
@@ -416,7 +416,7 @@ nanobot-webui/
 └── setup.py                    # Build hook: runs bun run build, copies dist into webui/
 ```
 
-**Design principle:** the backend is entirely non-invasive — it imports nanobot libraries but never patches their source. Runtime monkey-patches (applied in `webui/patches/`) are minimal and limited to quality-of-life tweaks (e.g. treating an empty `allow_from` list as "allow all"). All patches are applied once at startup before any nanobot internals are initialised.
+**Design principle:** the backend is entirely non-invasive — it imports nanobot libraries but never patches their source. Runtime monkey-patches (applied in `webui/patches/`) are minimal and limited to quality-of-life tweaks. All patches are applied once at startup before any nanobot internals are initialised.
 
 ---
 

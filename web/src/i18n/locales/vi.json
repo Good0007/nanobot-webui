@@ -80,7 +80,15 @@
     "searchSessions": "Tìm kiếm phiên...",
     "revokeConfirmTitle": "Thu hồi tin nhắn",
     "revokeConfirmDescription": "This will delete this message and all subsequent messages. Continue?",
-    "messageRevoked": "Tin nhắn đã bị thu hồi"
+    "messageRevoked": "Tin nhắn đã bị thu hồi",
+    "artifact": {
+      "loading": "Đang tải…",
+      "retry": "Thử lại",
+      "loadError": "Không thể tải tệp, vui lòng kiểm tra xem tệp có tồn tại không",
+      "openExternal": "Mở trong tab mới",
+      "download": "Tải xuống tệp",
+      "unsupported": "Loại tệp này không hỗ trợ xem trước. Vui lòng dùng nút tải xuống ở trên."
+    }
   },
   "providers": {
     "title": "Nhà cung cấp",

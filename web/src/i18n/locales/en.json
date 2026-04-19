@@ -80,7 +80,15 @@
     "searchSessions": "Search sessions...",
     "revokeConfirmTitle": "Revoke Message",
     "revokeConfirmDescription": "This will delete this message and all subsequent messages. Continue?",
-    "messageRevoked": "Message revoked"
+    "messageRevoked": "Message revoked",
+    "artifact": {
+      "loading": "Loading…",
+      "retry": "Retry",
+      "loadError": "Failed to load file, please check if the file exists",
+      "openExternal": "Open in new tab",
+      "download": "Download file",
+      "unsupported": "This file type is not supported for preview. Use the download button above to get the file."
+    }
   },
   "providers": {
     "title": "Providers",

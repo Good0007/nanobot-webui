@@ -80,7 +80,15 @@
     "searchSessions": "搜尋對話...",
     "revokeConfirmTitle": "撤回訊息",
     "revokeConfirmDescription": "此操作將刪除此訊息及其後的所有訊息，確定繼續？",
-    "messageRevoked": "訊息已撤回"
+    "messageRevoked": "訊息已撤回",
+    "artifact": {
+      "loading": "載入中…",
+      "retry": "重試",
+      "loadError": "無法載入檔案，請確認檔案是否存在",
+      "openExternal": "在新分頁開啟",
+      "download": "下載檔案",
+      "unsupported": "此檔案類型不支援預覽，請使用上方下載按鈕取得檔案。"
+    }
   },
   "providers": {
     "title": "模型供應商",

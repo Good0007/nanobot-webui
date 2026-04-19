@@ -11,11 +11,20 @@ export interface SessionInfo {
   last_message?: string;
 }
 
+export interface RawToolCall {
+  id: string;
+  type?: string;
+  function?: {
+    name: string;
+    arguments?: string;
+  };
+}
+
 export interface MessageInfo {
   role: string;
   content: string | null;
   timestamp?: string;
-  tool_calls?: unknown[];
+  tool_calls?: RawToolCall[];
   tool_call_id?: string;
   name?: string;
 }

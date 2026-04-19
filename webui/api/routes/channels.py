@@ -57,6 +57,36 @@ def _wecom_default_config() -> dict[str, Any]:
     return WecomConfig().model_dump(by_alias=True)
 
 
+# Map channel name → (module, Config class name)
+_CHANNEL_CONFIG_CLASS: dict[str, tuple[str, str]] = {
+    "telegram":  ("nanobot.channels.telegram",  "TelegramConfig"),
+    "whatsapp":  ("nanobot.channels.whatsapp",  "WhatsAppConfig"),
+    "discord":   ("nanobot.channels.discord",   "DiscordConfig"),
+    "feishu":    ("nanobot.channels.feishu",    "FeishuConfig"),
+    "dingtalk":  ("nanobot.channels.dingtalk",  "DingTalkConfig"),
+    "email":     ("nanobot.channels.email",     "EmailConfig"),
+    "slack":     ("nanobot.channels.slack",     "SlackConfig"),
+    "qq":        ("nanobot.channels.qq",        "QQConfig"),
+    "matrix":    ("nanobot.channels.matrix",    "MatrixConfig"),
+    "mochat":    ("nanobot.channels.mochat",    "MochatConfig"),
+}
+
+
+def _generic_default_config(name: str) -> dict[str, Any]:
+    """Return the default config dict for any channel that has a Config class."""
+    entry = _CHANNEL_CONFIG_CLASS.get(name)
+    if entry is None:
+        return {}
+    module_path, class_name = entry
+    try:
+        import importlib
+        mod = importlib.import_module(module_path)
+        cls = getattr(mod, class_name)
+        return cls().model_dump(by_alias=True)
+    except Exception:
+        return {}
+
+
 def _ilink_headers(*, auth_token: str | None = None) -> dict[str, str]:
     """Build per-request iLink API headers (random UIN, matching weixin.py)."""
     uint32 = int.from_bytes(os.urandom(4), "big")
@@ -90,10 +120,25 @@ def _channel_config_dict(name: str, svc: ServiceContainer) -> dict[str, Any]:
         elif name == "wecom":
             raw = _wecom_default_config()
         else:
-            return {}
+            raw = _generic_default_config(name)
+        # New deployment: default allowFrom to ["*"] (allow all, nanobot convention)
+        if "allowFrom" in raw and raw["allowFrom"] == []:
+            raw["allowFrom"] = ["*"]
     else:
         raw = cfg if isinstance(cfg, dict) else cfg.model_dump(by_alias=True)
         raw = dict(raw)  # ensure mutable copy
+        # If cfg is a sparse dict (e.g. only {"enabled": True}), fill in the
+        # remaining fields from the channel's own defaults so the UI has a
+        # complete set of fields to render.
+        if isinstance(cfg, dict):
+            if name == "weixin":
+                defaults = _weixin_default_config()
+            elif name == "wecom":
+                defaults = _wecom_default_config()
+            else:
+                defaults = _generic_default_config(name)
+            if defaults:
+                raw = {**defaults, **raw}  # defaults first, user values win
     # Mask common secret fields
     for key in ("token", "appSecret", "secret", "imapPassword", "smtpPassword",
                 "bridgeToken", "accessToken", "appToken", "botToken",
@@ -154,8 +199,11 @@ async def update_channel(
             # wecom may not be in config yet — bootstrap with defaults
             ch_cfg = _wecom_default_config()
         else:
-            # Bootstrap unknown channel with empty dict so it can be patched
-            ch_cfg = {}
+            # Bootstrap with channel's own defaults so all fields are present
+            ch_cfg = _generic_default_config(name)
+        # New deployment: default allowFrom to ["*"] (allow all, nanobot convention)
+        if isinstance(ch_cfg, dict) and ch_cfg.get("allowFrom") == []:
+            ch_cfg["allowFrom"] = ["*"]
 
     # Only update fields that are provided and don't contain mask placeholders.
     # Use by_alias=True (camelCase) so that merging camelCase payload keys from

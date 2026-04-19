@@ -7,12 +7,15 @@ import { cn } from "../../lib/utils";
 import type { ChatMessage } from "../../stores/chatStore";
 import { ToolCallCard } from "./ToolCallCard";
 import { ThinkingBlock } from "./ThinkingBlock";
+import { ArtifactPreview } from "./ArtifactPreview";
 import { useAuthStore } from "../../stores/authStore";
 import { Info, ChevronDown, ChevronRight, CheckCircle2, XCircle, Bot, Copy, Check, Undo2, X } from "lucide-react";
 
 interface MessageBubbleProps {
   message: ChatMessage;
   onRevoke?: (messageId: string) => void;
+  /** When true, only artifact preview cards are rendered (tool call details hidden) */
+  artifactOnly?: boolean;
 }
 
 function splitThinking(content: string): { type: "text" | "thinking"; content: string }[] {
@@ -92,52 +95,95 @@ function SubAgentProgressBlock({ message }: { message: ChatMessage }) {
   );
 }
 
+/** Extract all artifact file paths from any tool result message content.
+ *
+ * Detects:
+ *  1. write_file result:  "Successfully wrote N characters to /abs/path/file.ext"
+ *  2. Absolute paths anywhere in the text that end with a known file extension,
+ *     e.g. exec output "output: /workspace/video.mp4" or bare "/tmp/report.html"
+ *
+ * Returns deduplicated list; skips paths that look like code/log snippets
+ * (too short, no extension, or containing spaces after the path boundary).
+ */
+const ARTIFACT_EXTS = new Set([
+  "html", "htm",
+  "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico",
+  "mp4", "webm", "ogg", "mov", "avi", "mkv",
+  "md", "markdown",
+  "pdf", "zip", "tar", "gz", "csv", "json", "txt", "xml",
+  "mp3", "wav", "flac", "aac",
+]);
+
+export function extractArtifactPaths(content: string): string[] {
+  // Match absolute paths: start with / or ~, followed by non-whitespace chars,
+  // ending at whitespace / quote / end-of-string.
+  const PATH_RE = /(?:^|[\s:='"(])([~/][^\s'")\]>]+)/gm;
+  const seen = new Set<string>();
+  const results: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = PATH_RE.exec(content)) !== null) {
+    const raw = m[1].replace(/[.,;:)'"]+$/, ""); // strip trailing punctuation
+    const ext = raw.split(".").pop()?.toLowerCase() ?? "";
+    if (!ext || !ARTIFACT_EXTS.has(ext)) continue;
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    results.push(raw);
+  }
+  return results;
+}
+
 /** Tool execution result block — clean slate style, collapsible */
 function ToolResultBlock({ message }: { message: ChatMessage }) {
   const isError = message.content.startsWith("Error:");
   const isLong = message.content.length > 300;
   const [open, setOpen] = useState(false);
 
+  // Scan content for any artifact paths (works for write_file, exec, and custom tools).
+  const artifactPaths = isError ? [] : extractArtifactPaths(message.content);
+
   return (
-    <div className={cn(
-      "rounded-lg border text-xs overflow-hidden",
-      isError
-        ? "border-red-200/70 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/15"
-        : "border-border/60 bg-muted/30 dark:bg-muted/20"
-    )}>
-      <button
-        onClick={() => isLong && setOpen((v) => !v)}
-        className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5 text-left rounded-lg transition-colors",
-          isLong && "hover:bg-muted/50 cursor-pointer",
-          !isLong && "cursor-default"
+    <div className="space-y-1.5">
+      <div className={cn(
+        "rounded-lg border text-xs overflow-hidden",
+        isError
+          ? "border-red-200/70 bg-red-50/40 dark:border-red-800/40 dark:bg-red-950/15"
+          : "border-border/60 bg-muted/30 dark:bg-muted/20"
+      )}>
+        <button
+          onClick={() => isLong && setOpen((v) => !v)}
+          className={cn(
+            "flex w-full items-center gap-2 px-3 py-1.5 text-left rounded-lg transition-colors",
+            isLong && "hover:bg-muted/50 cursor-pointer",
+            !isLong && "cursor-default"
+          )}
+        >
+          {isError
+            ? <XCircle className="h-3 w-3 shrink-0 text-red-500" />
+            : <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />}
+          <span className="font-mono font-medium text-foreground/70 truncate">
+            {message.name || "tool"}
+          </span>
+          <span className="ml-auto mr-1 shrink-0 text-[10px] text-muted-foreground/40">
+            {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          {isLong && (
+            open
+              ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+          )}
+        </button>
+        {(open || !isLong) && (
+          <div className="border-t border-border/40 px-3 py-2">
+            <pre className={cn(
+              "max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed",
+              isError ? "text-red-700/80 dark:text-red-300/70" : "text-muted-foreground/80"
+            )}>
+              {message.content}
+            </pre>
+          </div>
         )}
-      >
-        {isError
-          ? <XCircle className="h-3 w-3 shrink-0 text-red-500" />
-          : <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />}
-        <span className="font-mono font-medium text-foreground/70 truncate">
-          {message.name || "tool"}
-        </span>
-        <span className="ml-auto mr-1 shrink-0 text-[10px] text-muted-foreground/40">
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </span>
-        {isLong && (
-          open
-            ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-            : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
-        )}
-      </button>
-      {(open || !isLong) && (
-        <div className="border-t border-border/40 px-3 py-2">
-          <pre className={cn(
-            "max-h-48 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed",
-            isError ? "text-red-700/80 dark:text-red-300/70" : "text-muted-foreground/80"
-          )}>
-            {message.content}
-          </pre>
-        </div>
-      )}
+      </div>
+      {artifactPaths.map((p) => <ArtifactPreview key={p} filePath={p} />)}
     </div>
   );
 }
@@ -266,7 +312,7 @@ function ToolMessageWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function MessageBubble({ message, onRevoke }: MessageBubbleProps) {
+export function MessageBubble({ message, onRevoke, artifactOnly }: MessageBubbleProps) {
   const user = useAuthStore((s) => s.user);
 
   // Don't render anything for empty/whitespace messages
@@ -281,16 +327,49 @@ export function MessageBubble({ message, onRevoke }: MessageBubbleProps) {
 
   // SubAgent tool result (persisted from session, role="sub_tool")
   if (message.role === "sub_tool") {
+    if (artifactOnly) {
+      const paths = extractArtifactPaths(message.content);
+      if (paths.length === 0) return null;
+      return (
+        <ToolMessageWrapper>
+          <div className="space-y-1.5">
+            {paths.map((p) => <ArtifactPreview key={p} filePath={p} />)}
+          </div>
+        </ToolMessageWrapper>
+      );
+    }
     return <ToolMessageWrapper><SubAgentToolBlock message={message} /></ToolMessageWrapper>;
   }
 
   // SubAgent progress — indigo-tinted block with bot icon
   if (message.role === "tool" && message.isSubAgent) {
+    if (artifactOnly) {
+      const paths = extractArtifactPaths(message.content);
+      if (paths.length === 0) return null;
+      return (
+        <ToolMessageWrapper>
+          <div className="space-y-1.5">
+            {paths.map((p) => <ArtifactPreview key={p} filePath={p} />)}
+          </div>
+        </ToolMessageWrapper>
+      );
+    }
     return <ToolMessageWrapper><SubAgentProgressBlock message={message} /></ToolMessageWrapper>;
   }
 
   // Tool result — compact collapsible block (no avatar)
   if (message.role === "tool") {
+    if (artifactOnly) {
+      const paths = extractArtifactPaths(message.content);
+      if (paths.length === 0) return null;
+      return (
+        <ToolMessageWrapper>
+          <div className="space-y-1.5">
+            {paths.map((p) => <ArtifactPreview key={p} filePath={p} />)}
+          </div>
+        </ToolMessageWrapper>
+      );
+    }
     return <ToolMessageWrapper><ToolResultBlock message={message} /></ToolMessageWrapper>;
   }
 

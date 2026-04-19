@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore } from "../../stores/chatStore";
 import { ChatWebSocket, type WsMessage } from "../../lib/ws";
-import { MessageBubble } from "./MessageBubble";
+import { MessageBubble, extractArtifactPaths } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { useRevokeMessage } from "../../hooks/useSessions";
 
@@ -32,7 +32,14 @@ export function ChatWindow() {
 
   const visibleMessages = showToolMessages
     ? messages
-    : messages.filter((m) => m.role !== "tool" && m.role !== "sub_tool" && m.role !== "system");
+    : messages.filter((m) => {
+        if (m.role !== "tool" && m.role !== "sub_tool" && m.role !== "system") return true;
+        // Keep tool messages that produced artifacts so previews are still shown
+        if (m.role === "tool" || m.role === "sub_tool") {
+          return extractArtifactPaths(m.content).length > 0;
+        }
+        return false;
+      });
 
   const wsRef = useRef<ChatWebSocket | null>(null);
   const assistantMsgIdRef = useRef<string | null>(null);
@@ -227,6 +234,7 @@ export function ChatWindow() {
                 key={msg.id}
                 message={msg}
                 onRevoke={handleRevoke}
+                artifactOnly={!showToolMessages && (msg.role === "tool" || msg.role === "sub_tool")}
               />
             ))}
           </div>

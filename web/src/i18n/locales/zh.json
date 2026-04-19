@@ -80,7 +80,15 @@
     "searchSessions": "搜索会话...",
     "revokeConfirmTitle": "撤回消息",
     "revokeConfirmDescription": "此操作将删除该消息及其之后的所有消息，确定继续？",
-    "messageRevoked": "消息已撤回"
+    "messageRevoked": "消息已撤回",
+    "artifact": {
+      "loading": "加载中…",
+      "retry": "重试",
+      "loadError": "无法加载文件，请检查文件是否存在",
+      "openExternal": "在新标签页打开",
+      "download": "下载文件",
+      "unsupported": "该文件类型不支持预览，请使用上方下载按钮获取文件。"
+    }
   },
   "providers": {
     "title": "模型提供商",

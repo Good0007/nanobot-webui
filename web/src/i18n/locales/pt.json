@@ -80,7 +80,15 @@
     "searchSessions": "Buscar sessões...",
     "revokeConfirmTitle": "Revogar mensagem",
     "revokeConfirmDescription": "Isso excluirá esta mensagem e todas as mensagens seguintes. Continuar?",
-    "messageRevoked": "Mensagem revogada"
+    "messageRevoked": "Mensagem revogada",
+    "artifact": {
+      "loading": "Carregando…",
+      "retry": "Tentar novamente",
+      "loadError": "Não foi possível carregar o arquivo, verifique se ele existe",
+      "openExternal": "Abrir em nova aba",
+      "download": "Baixar arquivo",
+      "unsupported": "Este tipo de arquivo não suporta visualização. Use o botão de download acima."
+    }
   },
   "providers": {
     "title": "Provedores",
