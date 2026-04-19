@@ -11,6 +11,7 @@ import de from "./locales/de.json";
 import fr from "./locales/fr.json";
 import pt from "./locales/pt.json";
 import es from "./locales/es.json";
+import vi from "./locales/vi.json";
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_STORAGE_KEY,
@@ -44,7 +45,9 @@ const detectLanguage = (): string => {
     return "es";
   } else if (browserLang.startsWith("en")) {
     return "en";
-  }
+  } else if (browserLang.startsWith("vi")) {
+    return "vi";
+  }  
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (timezone.includes("Asia/Shanghai")) {
@@ -75,6 +78,11 @@ const detectLanguage = (): string => {
     timezone.includes("America/Buenos_Aires")
   ) {
     return "es";
+  } else if (
+    timezone.includes("Asia/Ho_Chi_Minh") ||
+    timezone.includes("Asia/Hanoi")
+  ) {
+    return "vi";
   }
 
   return DEFAULT_LANGUAGE;
@@ -94,6 +102,7 @@ i18n
       fr: { translation: fr },
       pt: { translation: pt },
       es: { translation: es },
+	  vi: { translation: vi },
     },
     lng: detectLanguage(),
     fallbackLng: DEFAULT_LANGUAGE,

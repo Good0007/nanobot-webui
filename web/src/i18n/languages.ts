@@ -10,6 +10,7 @@ export const LANGUAGE_OPTIONS = [
   { code: "fr", label: "Français" },
   { code: "pt", label: "Português" },
   { code: "es", label: "Español" },
+  { code: "vi", label: "Tiếng Việt" },  
 ] as const;
 
 export type LanguageCode = (typeof LANGUAGE_OPTIONS)[number]["code"];
@@ -30,6 +31,7 @@ const LANGUAGE_LABELS: Record<LanguageCode, string> = {
   fr: "Français",
   pt: "Português",
   es: "Español",
+  vi: "Tiếng Việt",
 };
 
 const supportedLangSet = new Set<string>(SUPPORTED_LANGS);
