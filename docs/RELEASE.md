@@ -1,5 +1,42 @@
 # Release Notes
 
+## v0.2.8 — 2026-04-19
+
+### Chat Artifact Preview
+
+- Added `ArtifactPreview` component: files written by agent tools are now rendered as inline preview cards directly in the chat window
+- Supported preview types: HTML (sandbox iframe with external-open button), images, video, Markdown, and plain text / code files with syntax highlighting (via rehype-highlight)
+- All file types support one-click download via independent blob fetch
+- Artifact previews are visible even when "show tool messages" is turned off — tool messages containing file paths are kept in the message stream and rendered as preview-only cards, hiding all other tool call details
+- Added new backend API route `GET /api/workspace/file?path=` to serve workspace files with auth and path-traversal protection
+
+### Channel Configuration Improvements
+
+- All channels (Telegram, WhatsApp, Discord, Feishu, DingTalk, Email, Slack, QQ, MoChat, etc.) now show their full default configuration fields on a fresh deployment — previously only WeChat and WeCom had default values and all other channels appeared with no fields to expand
+- Sparse channel configs already saved in `config.json` (e.g. `{"enabled": true}` only) are now merged with the channel's full defaults so all fields render correctly in the UI
+- `allowFrom` now defaults to `["*"]` (allow all) for channels that have never been configured, consistent with nanobot's own convention
+
+### i18n — Vietnamese (vi)
+
+- Added Vietnamese as the 10th supported UI language
+- Added `README_vi.md` (fully aligned with the English README in structure, commands, and architecture tree)
+- Language auto-detection covers Vietnamese browser locale
+
+### CLI & Daemon Refactor
+
+- Entrypoints (`nanobot-webui`, `webui`) now resolve to `webui.cli:run_webui` — cleaner, no intermediate `__main__` dispatch
+- Daemon re-launch command switched from `shutil.which("nanobot")` to `sys.executable -m webui start ...` for stable behavior across all install methods (pip, uv tool, Docker)
+- Stop-hint message in daemon mode updated to `nanobot-webui stop`
+- `-h` / `--help` registered as help option names alongside `--help`
+
+### Dependency & Packaging
+
+- Bumped `nanobot-ai` dependency to `==0.1.5.post1`
+- Removed `webui/patches/exec_windows.py` — Windows exec compatibility is now handled upstream in `nanobot-ai 0.1.5.post1`
+- Updated Dockerfile default install version to `0.2.8`
+
+---
+
 ## v0.2.7.post3 — 2026-04-11
 
 **Direct Changes from `v0.2.7` to `v0.2.7.post3`**
