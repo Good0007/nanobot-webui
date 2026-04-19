@@ -24,11 +24,21 @@ def apply() -> None:
 
     # ── Patch 1 & 2: access control ──────────────────────────────────────────
 
+    def _get_allow_list(config):
+        if isinstance(config, dict):
+            if "allow_from" in config:
+                return config.get("allow_from", [])
+            return config.get("allowFrom", [])
+        allow_list = getattr(config, "allow_from", None)
+        if allow_list is None:
+            allow_list = getattr(config, "allowFrom", [])
+        return allow_list
+
     def _is_allowed_patched(self, sender_id: str) -> bool:
-        allow_list = getattr(self.config, "allow_from", [])
+        allow_list = _get_allow_list(self.config) or []
         if not allow_list or "*" in allow_list:
             return True
-        return str(sender_id) in allow_list
+        return str(sender_id) in {str(item) for item in allow_list}
 
     _base.BaseChannel.is_allowed = _is_allowed_patched  # type: ignore[method-assign]
     _manager.ChannelManager._validate_allow_from = lambda self: None  # type: ignore[method-assign]

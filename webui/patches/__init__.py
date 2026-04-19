@@ -15,12 +15,11 @@ subagent    [SubAgent]    Push tool-call progress to WebUI / external channels.
 
 from __future__ import annotations
 
-from webui.patches import channels, mcp_dynamic, provider, session, skills, subagent, config, exec_windows
+from webui.patches import channels, mcp_dynamic, provider, session, skills, subagent, config
 
 
 def apply_all() -> None:
     """Apply every patch in dependency order."""
-    exec_windows.apply()  # backport cross-platform ExecTool behavior
     config.apply()       # must run early to intercept Config methods
     mcp_dynamic.apply()  # must run before agent is created
     channels.apply()
