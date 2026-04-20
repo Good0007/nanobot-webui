@@ -59,6 +59,7 @@
       "updateSuccess": "Update complete, please restart to apply",
       "updateFailed": "Update failed",
       "updateHint": "Will restart to take effect",
+      "bundled": "Managed by webui",
       "unknown": "unknown"
     }
   },

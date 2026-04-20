@@ -59,6 +59,7 @@
       "updateSuccess": "更新完成，请重启服务生效",
       "updateFailed": "更新失败",
       "updateHint": "重启后生效",
+      "bundled": "随 webui 更新",
       "unknown": "未知"
     }
   },

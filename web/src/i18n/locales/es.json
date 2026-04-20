@@ -59,6 +59,7 @@
       "updateSuccess": "Actualización completa, reinicie para aplicar",
       "updateFailed": "Error al actualizar",
       "updateHint": "Requiere reinicio",
+      "bundled": "Gestionado por webui",
       "unknown": "Desconocido"
     }
   },

@@ -59,6 +59,7 @@
       "updateSuccess": "Cập nhật hoàn tất, vui lòng khởi động lại",
       "updateFailed": "Cập nhật thất bại",
       "updateHint": "Cần khởi động lại",
+      "bundled": "Được quản lý bởi webui",
       "unknown": "Không rõ"
     }
   },

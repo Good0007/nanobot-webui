@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import json as _json
 import shutil
 import sys
-from typing import Annotated
+from typing import Annotated, AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from webui.api.deps import get_current_user, require_admin
 
@@ -40,19 +42,34 @@ async def _fetch_pypi_version(package: str) -> str | None:
     return await loop.run_in_executor(None, _fetch)
 
 
+def _get_nanobot_required_version() -> str:
+    """Read the nanobot-ai version required by the installed nanobot-webui."""
+    try:
+        from importlib.metadata import requires
+        deps = requires("nanobot-webui") or []
+        for dep in deps:
+            if dep.lower().startswith("nanobot-ai"):
+                # e.g. "nanobot-ai==0.1.5.post1"
+                return dep.split("==")[-1].strip()
+        return "unknown"
+    except Exception:
+        return "unknown"
+
+
 @router.get("/version")
 async def get_version(
     current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
-    """Return current installed and latest PyPI versions of nanobot and nanobot-webui."""
+    """Return current installed and latest PyPI versions.
+
+    nanobot-ai version is determined by the nanobot-webui dependency spec;
+    only nanobot-webui is checked against PyPI for updates.
+    """
     webui_current = _get_installed_version("nanobot-webui")
     nanobot_current = _get_installed_version("nanobot-ai")
+    nanobot_required = _get_nanobot_required_version()
 
-    # Fetch latest versions from PyPI concurrently
-    webui_latest, nanobot_latest = await asyncio.gather(
-        _fetch_pypi_version("nanobot-webui"),
-        _fetch_pypi_version("nanobot-ai"),
-    )
+    webui_latest = await _fetch_pypi_version("nanobot-webui")
 
     return {
         "nanobot_webui": {
@@ -61,61 +78,73 @@ async def get_version(
         },
         "nanobot": {
             "current": nanobot_current,
-            "latest": nanobot_latest,
+            # Show the version bundled with the latest nanobot-webui, not independently tracked
+            "latest": nanobot_required,
         },
     }
 
 
-@router.post("/update")
-async def update_packages(
-    admin: Annotated[dict, Depends(require_admin)],
-) -> dict:
-    """Upgrade nanobot and nanobot-webui to their latest PyPI versions (admin only).
+def _sse(event: str, data: str) -> str:
+    """Format a single SSE message."""
+    payload = _json.dumps({"event": event, "data": data})
+    return f"data: {payload}\n\n"
 
-    Tries multiple install strategies in order:
-    1. python -m pip install --upgrade  (standard pip)
-    2. uv pip install --upgrade         (uv-managed venv without pip module)
-    """
-    packages = ["nanobot-ai", "nanobot-webui"]
 
-    async def _run(*cmd: str) -> tuple[int, str]:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=180)
-        output = stdout.decode(errors="replace") if stdout else ""
-        return proc.returncode, output
+async def _stream_upgrade() -> AsyncIterator[str]:
+    """Run pip/uv upgrade for nanobot-webui (nanobot-ai follows as a dependency)."""
+    packages = ["nanobot-webui"]
 
     strategies: list[list[str]] = [
         [sys.executable, "-m", "pip", "install", "--upgrade", *packages],
     ]
-    # If uv is available, add it as a fallback (install into the current venv)
     uv_bin = shutil.which("uv")
     if uv_bin:
         strategies.append([uv_bin, "pip", "install", "--upgrade",
                             "--python", sys.executable, *packages])
 
-    last_output = ""
-    for cmd in strategies:
+    for idx, cmd in enumerate(strategies):
+        yield _sse("log", f"$ {' '.join(cmd)}")
         try:
-            code, output = await _run(*cmd)
-            last_output = output
-            if code == 0:
-                return {"success": True, "output": output[-1000:]}
-            # If pip module is missing, try next strategy
-            if "No module named pip" in output:
-                continue
-            # Other non-zero exit: surface immediately
-            raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                f"Update failed (exit {code}): {output[-600:]}",
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
             )
-        except asyncio.TimeoutError:
-            raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "Update timed out after 180 s")
+            assert proc.stdout is not None
+            no_pip = False
+            async for raw in proc.stdout:
+                line = raw.decode(errors="replace").rstrip()
+                if line:
+                    yield _sse("log", line)
+                    if "No module named pip" in line:
+                        no_pip = True
 
-    raise HTTPException(
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-        f"No working package manager found. Last output: {last_output[-400:]}",
+            await asyncio.wait_for(proc.wait(), timeout=180)
+            if proc.returncode == 0:
+                yield _sse("done", "Update completed successfully.")
+                return
+            if no_pip and idx < len(strategies) - 1:
+                yield _sse("log", "pip not available, trying next strategy...")
+                continue
+            yield _sse("error", f"Update failed (exit {proc.returncode}).")
+            return
+        except asyncio.TimeoutError:
+            yield _sse("error", "Update timed out after 180 s.")
+            return
+
+    yield _sse("error", "No working package manager found.")
+
+
+@router.post("/update")
+async def update_packages(
+    admin: Annotated[dict, Depends(require_admin)],
+) -> StreamingResponse:
+    """Stream upgrade progress via SSE (admin only)."""
+    return StreamingResponse(
+        _stream_upgrade(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )

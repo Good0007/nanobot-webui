@@ -59,6 +59,7 @@
       "updateSuccess": "Mise à jour terminée, redémarrez pour appliquer",
       "updateFailed": "Échec de la mise à jour",
       "updateHint": "Redémarrage requis",
+      "bundled": "Géré par webui",
       "unknown": "Inconnu"
     }
   },

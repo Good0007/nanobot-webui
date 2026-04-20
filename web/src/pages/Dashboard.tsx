@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -29,6 +30,35 @@ export default function Dashboard() {
   const updatePackages = useUpdatePackages();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin";
+  const [updateLogs, setUpdateLogs] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll log area
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [updateLogs]);
+
+  const handleUpdate = useCallback(() => {
+    setUpdateLogs([]);
+    updatePackages.mutate(
+      (line, event) => {
+        setUpdateLogs((prev) => [...prev, line]);
+        if (event === "done") {
+          toast.success(t("dashboard.version.updateSuccess"));
+          refetchVersion();
+        } else if (event === "error") {
+          toast.error(t("dashboard.version.updateFailed") + ": " + line);
+        }
+      },
+      {
+        onError: (e: unknown) =>
+          toast.error(
+            t("dashboard.version.updateFailed") + ": " +
+            ((e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? String(e))
+          ),
+      }
+    );
+  }, [updatePackages, t, refetchVersion]);
 
   const runningChannels = channels?.filter((c) => c.running).length ?? 0;
   const totalChannels = channels?.length ?? 0;
@@ -213,7 +243,11 @@ export default function Dashboard() {
                         <span className="text-sm text-muted-foreground font-mono">
                           {pkg?.current ?? t("dashboard.version.unknown")}
                         </span>
-                        {pkg?.latest === null ? null : hasUpdate ? (
+                        {key === "nanobot" ? (
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                            {t("dashboard.version.bundled")}
+                          </Badge>
+                        ) : pkg?.latest === null ? null : hasUpdate ? (
                           <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 px-1.5 py-0">
                             → {pkg?.latest}
                           </Badge>
@@ -227,34 +261,40 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-              {isAdmin && !!versionInfo && [
-                versionInfo.nanobot_webui,
-                versionInfo.nanobot,
-              ].some(
-                (pkg) => pkg?.latest && pkg.current !== "unknown" && pkg.latest !== pkg.current
-              ) && (
-                <div className="flex items-center gap-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={updatePackages.isPending}
-                    onClick={() =>
-                      updatePackages.mutate(undefined, {
-                        onSuccess: () => toast.success(t("dashboard.version.updateSuccess")),
-                        onError: (e: unknown) => toast.error(
-                          t("dashboard.version.updateFailed") + ": " +
-                          ((e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? String(e))
-                        ),
-                      })
-                    }
-                  >
-                    {updatePackages.isPending ? (
-                      <><RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />{t("dashboard.version.updating")}</>
-                    ) : (
-                      t("dashboard.version.update")
-                    )}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">{t("dashboard.version.updateHint")}</span>
+              {isAdmin && !!versionInfo && (() => {
+                const w = versionInfo.nanobot_webui;
+                return w?.latest && w.current !== "unknown" && w.latest !== w.current;
+              })() && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={updatePackages.isPending}
+                      onClick={handleUpdate}
+                    >
+                      {updatePackages.isPending ? (
+                        <><RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />{t("dashboard.version.updating")}</>
+                      ) : (
+                        t("dashboard.version.update")
+                      )}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">{t("dashboard.version.updateHint")}</span>
+                  </div>
+                  {(updatePackages.isPending || updateLogs.length > 0) && (
+                    <div className="rounded-md border bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground max-h-48 overflow-y-auto">
+                      {updateLogs.map((line, i) => (
+                        <div key={i} className="leading-5 whitespace-pre-wrap break-all">{line}</div>
+                      ))}
+                      {updatePackages.isPending && (
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          <span>{t("dashboard.version.updating")}…</span>
+                        </div>
+                      )}
+                      <div ref={logEndRef} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

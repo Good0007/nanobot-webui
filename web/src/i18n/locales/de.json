@@ -59,6 +59,7 @@
       "updateSuccess": "Update abgeschlossen, bitte neu starten",
       "updateFailed": "Update fehlgeschlagen",
       "updateHint": "Neustart erforderlich",
+      "bundled": "Wird mit webui aktualisiert",
       "unknown": "Unbekannt"
     }
   },

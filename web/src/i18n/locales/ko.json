@@ -59,6 +59,7 @@
       "updateSuccess": "업데이트 완료, 재시작 후 적용됩니다",
       "updateFailed": "업데이트 실패",
       "updateHint": "재시작 필요",
+      "bundled": "webui와 함께 업데이트",
       "unknown": "알 수 없음"
     }
   },
