@@ -43,11 +43,52 @@ def _mask(value: str) -> str:
     return f"••••{value[-4:]}"
 
 
+# [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+# Environment variable names that can influence dynamic linker / interpreter
+# loading and must not be injected by exec_env (defense-in-depth).
+_EXEC_ENV_DENYLIST = frozenset({
+    "LD_PRELOAD",
+    "LD_LIBRARY_PATH",
+    "LD_AUDIT",
+    "LD_DEBUG",
+    "DYLD_INSERT_LIBRARIES",   # macOS equivalent of LD_PRELOAD
+    "DYLD_LIBRARY_PATH",
+    "PYTHONPATH",              # could load attacker-controlled .py modules
+    "PYTHONSTARTUP",
+    "NODE_PATH",               # could load attacker-controlled Node modules
+    "RUBYLIB",
+    "RUBYOPT",
+    "PERL5LIB",
+    "PERLLIB",
+})
+
+
+def _validate_exec_env_keys(env: dict[str, str]) -> None:
+    """Raise HTTPException if any key is invalid or in the denylist."""
+    import re
+    # Env-var names must be non-empty identifiers (letters, digits, underscore;
+    # must not start with a digit).
+    _valid_key = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+    for key in env:
+        if not key:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                "exec_env key must not be empty")
+        if not _valid_key.match(key):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                f"exec_env key '{key}' contains invalid characters")
+        if key.upper() in _EXEC_ENV_DENYLIST:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                f"exec_env key '{key}' is not allowed for security reasons")
+# [AI:END]
+
+
 @router.get("/agent", response_model=AgentSettingsResponse)
 async def get_agent_settings(
     _admin: Annotated[dict, Depends(require_admin)],
     svc: Annotated[ServiceContainer, Depends(get_services)],
 ) -> AgentSettingsResponse:
+    from webui.utils.webui_config import get_exec_env, get_exec_env_passthrough
+
     d = svc.config.agents.defaults
     t = svc.config.tools
     ch = svc.config.channels
@@ -81,6 +122,10 @@ async def get_agent_settings(
         send_tool_hints=ch.send_tool_hints,
         channels_send_max_retries=ch.send_max_retries,
         channels_transcription_provider=ch.transcription_provider,
+        # [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+        exec_env=get_exec_env(),
+        exec_env_passthrough=get_exec_env_passthrough(),
+        # [AI:END]
     )
 
 
@@ -154,6 +199,15 @@ async def update_agent_settings(
         ch.send_max_retries = body.channels_send_max_retries
     if body.channels_transcription_provider is not None:
         ch.transcription_provider = body.channels_transcription_provider
+    # [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+    if body.exec_env is not None:
+        from webui.utils.webui_config import set_exec_env
+        _validate_exec_env_keys(body.exec_env)
+        set_exec_env(body.exec_env)
+    if body.exec_env_passthrough is not None:
+        from webui.utils.webui_config import set_exec_env_passthrough
+        set_exec_env_passthrough(body.exec_env_passthrough)
+    # [AI:END]
 
     save_config(svc.config)
     svc.reload_provider()

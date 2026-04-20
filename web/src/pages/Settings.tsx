@@ -343,6 +343,11 @@ function AgentTab() {
   const [execTimeout, setExecTimeout] = useState("60");
   const [pathAppend, setPathAppend] = useState("");
   const [restrictToWorkspace, setRestrictToWorkspace] = useState(false);
+  // [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+  // exec_env: KEY=VALUE one per line; exec_env_passthrough: one name per line
+  const [execEnv, setExecEnv] = useState("");
+  const [execEnvPassthrough, setExecEnvPassthrough] = useState("");
+  // [AI:END]
 
   // Security state (one CIDR per line)
   const [ssrfWhitelist, setSsrfWhitelist] = useState("");
@@ -387,6 +392,10 @@ function AgentTab() {
     setExecTimeout(String(agent.exec_timeout ?? 60));
     setPathAppend(agent.path_append ?? "");
     setRestrictToWorkspace(agent.restrict_to_workspace ?? false);
+    // [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+    setExecEnv(Object.entries(agent.exec_env ?? {}).map(([k, v]) => `${k}=${v}`).join("\n"));
+    setExecEnvPassthrough((agent.exec_env_passthrough ?? []).join("\n"));
+    // [AI:END]
     // Security
     setSsrfWhitelist((agent.ssrf_whitelist ?? []).join("\n"));
     // Dream
@@ -426,12 +435,30 @@ function AgentTab() {
   };
 
   const handleSaveExec = () => {
+    // [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+    // Parse KEY=VALUE lines → object; skip blank / comment lines
+    const parsedEnv: Record<string, string> = {};
+    execEnv.split("\n").forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) return;
+      const idx = trimmed.indexOf("=");
+      if (idx > 0) {
+        parsedEnv[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1);
+      }
+    });
+    const parsedPassthrough = execEnvPassthrough
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    // [AI:END]
     updateAgent.mutate({
       exec_enable: execEnable,
       exec_sandbox: execSandbox,
       exec_timeout: execTimeout ? Number(execTimeout) : undefined,
       path_append: pathAppend,
       restrict_to_workspace: restrictToWorkspace,
+      exec_env: parsedEnv,
+      exec_env_passthrough: parsedPassthrough,
     }, { onSuccess: () => toast.success(t("settings.saved")) });
   };
 
@@ -658,6 +685,28 @@ function AgentTab() {
                 <Label>{t("settings.pathAppend")}</Label>
                 <Input value={pathAppend} onChange={(e) => setPathAppend(e.target.value)} placeholder="/usr/local/bin:/opt/homebrew/bin" className="font-mono text-sm" />
               </div>
+              {/* [AI:START] tool=copilot date=2026-04-20 author=chenweikang */}
+              <div className="space-y-1 sm:col-span-2">
+                <Label>{t("settings.execEnv")}</Label>
+                <Textarea
+                  value={execEnv}
+                  onChange={(e) => setExecEnv(e.target.value)}
+                  placeholder={"JAVA_HOME=/usr/lib/jvm/java-17\nNODE_ENV=production"}
+                  className="font-mono text-xs h-24 resize-none"
+                />
+                <p className="text-xs text-muted-foreground">{t("settings.execEnvDesc")}</p>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>{t("settings.execEnvPassthrough")}</Label>
+                <Textarea
+                  value={execEnvPassthrough}
+                  onChange={(e) => setExecEnvPassthrough(e.target.value)}
+                  placeholder={"OPENAI_API_KEY\nDATABASE_URL\nAWS_ACCESS_KEY_ID"}
+                  className="font-mono text-xs h-20 resize-none"
+                />
+                <p className="text-xs text-muted-foreground">{t("settings.execEnvPassthroughDesc")}</p>
+              </div>
+              {/* [AI:END] */}
             </div>
           )}
           <div className="flex justify-end sm:justify-start">

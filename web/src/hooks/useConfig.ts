@@ -33,6 +33,10 @@ export interface AgentSettings {
   send_tool_hints?: boolean;
   channels_send_max_retries?: number;
   channels_transcription_provider?: string;
+  // [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+  exec_env?: Record<string, string>;
+  exec_env_passthrough?: string[];
+  // [AI:END]
 }
 
 export interface GatewayConfig {

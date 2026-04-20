@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { nanoid } from "nanoid";
+import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChatStore } from "../../stores/chatStore";
 import { ChatWebSocket, type WsMessage } from "../../lib/ws";
@@ -165,6 +166,13 @@ export function ChatWindow() {
         const targetKey = msgSessionKey || currentKey || "";
         qc.invalidateQueries({ queryKey: ["sessions", targetKey, "messages"] });
         qc.invalidateQueries({ queryKey: ["sessions"] });
+      } else if (msg.type === "cron_result") {
+        // A cron job has finished. Refresh sessions list and cron history so
+        // the latest run is visible, then show a toast linking to the session.
+        qc.invalidateQueries({ queryKey: ["sessions"] });
+        qc.invalidateQueries({ queryKey: ["cron", "sessions"] });
+        const preview = (msg.content as string)?.slice(0, 80) ?? "";
+        toast.info(`⏰ ${msg.job_name ?? t("cron.title")}: ${preview}${preview.length >= 80 ? "…" : ""}`);
       }
     },
     [addMessage, qc, setCurrentSession, setProgress, setWaiting, t]

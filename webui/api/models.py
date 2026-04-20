@@ -80,6 +80,10 @@ class AgentSettingsResponse(BaseModel):
     send_tool_hints: bool
     channels_send_max_retries: int
     channels_transcription_provider: str
+    # [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+    exec_env: dict[str, str]
+    exec_env_passthrough: list[str]
+    # [AI:END]
 
 
 class AgentSettingsRequest(BaseModel):
@@ -112,6 +116,10 @@ class AgentSettingsRequest(BaseModel):
     send_tool_hints: bool | None = None
     channels_send_max_retries: int | None = None
     channels_transcription_provider: str | None = None
+    # [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+    exec_env: dict[str, str] | None = None
+    exec_env_passthrough: list[str] | None = None
+    # [AI:END]
 
 
 class HeartbeatConfigModel(BaseModel):

@@ -27,6 +27,43 @@ router = APIRouter()
 _web_captures: dict[str, list[asyncio.Queue]] = {}
 _message_tool_patched = False
 
+# ---------------------------------------------------------------------------
+# Cron result push registry
+#
+# When a cron job fires for channel="web", the on_cron_job callback in
+# __main__.py can call push_cron_result() to deliver the result to all
+# active WebSocket connections for that user, without requiring a round-trip
+# through the agent's message() tool or the bus channel dispatcher.
+# ---------------------------------------------------------------------------
+
+# user_id → list[asyncio.Queue[dict]]: one queue per active WebSocket connection
+_cron_push: dict[str, list[asyncio.Queue]] = {}
+
+
+def _register_cron_push(user_id: str, q: "asyncio.Queue[dict]") -> None:
+    _cron_push.setdefault(str(user_id), []).append(q)
+
+
+def _unregister_cron_push(user_id: str, q: "asyncio.Queue[dict]") -> None:
+    lst = _cron_push.get(str(user_id), [])
+    if q in lst:
+        lst.remove(q)
+    if not lst:
+        _cron_push.pop(str(user_id), None)
+
+
+async def push_cron_result(user_id: str, payload: dict) -> None:
+    """Push a cron job result to all active WebSocket connections for *user_id*.
+
+    Called from the cron job callback (``__main__.on_cron_job``) after the
+    agent finishes processing a web-channel cron job.  Each active connection
+    has its own queue; a background drain task inside ``ws_chat`` reads from
+    the queue and forwards the JSON frame to the browser.
+    """
+    queues = list(_cron_push.get(str(user_id), []))
+    for q in queues:
+        await q.put(payload)
+
 
 def _ensure_message_tool_patched(container: Any) -> None:
     """One-time patch of the AgentLoop's MessageTool send_callback."""
@@ -140,6 +177,26 @@ async def ws_chat(websocket: WebSocket) -> None:
 
     await websocket.send_json({"type": "session_info", "session_key": session_key})
 
+    # Register a cron push queue so that on_cron_job() can deliver results to
+    # this WebSocket connection when a web-channel cron job completes.
+    uid = str(user["id"])
+    cron_q: asyncio.Queue[dict] = asyncio.Queue()
+    _register_cron_push(uid, cron_q)
+
+    async def _drain_cron_queue() -> None:
+        """Forward cron result frames from the queue to this WebSocket."""
+        try:
+            while True:
+                payload = await cron_q.get()
+                try:
+                    await websocket.send_json(payload)
+                except Exception:
+                    break
+        except asyncio.CancelledError:
+            pass
+
+    cron_drain_task = asyncio.create_task(_drain_cron_queue())
+
     # Per-session task tracking: allows multiple sessions to run concurrently
     # through a single WebSocket connection.
     session_tasks: dict[str, asyncio.Task] = {}
@@ -245,9 +302,11 @@ async def ws_chat(websocket: WebSocket) -> None:
                     # Register a capture queue for this connection so that
                     # message() tool replies addressed to channel="web" are
                     # delivered here instead of being discarded by the dispatcher.
+                    # Key by sess (not uid) so the MessageTool patch can look up
+                    # queues using outbound_msg.chat_id which equals sess.
                     capture_q: asyncio.Queue[str] = asyncio.Queue()
                     uid = str(user["id"])
-                    _web_captures.setdefault(uid, []).append(capture_q)
+                    _web_captures.setdefault(sess, []).append(capture_q)
                     # Register on_progress so SubAgent background tasks can push
                     # tool-call hints to this WebSocket connection.
                     # Uses "subagent_progress" type so frontend shows them as
@@ -325,7 +384,10 @@ async def ws_chat(websocket: WebSocket) -> None:
                             msg,
                             session_key=sess,
                             channel="web",
-                            chat_id=user["id"],
+                            # Pass the session key as chat_id so that CronTool
+                            # stores it in job.payload.to — enabling cron results
+                            # to be delivered back to the originating session.
+                            chat_id=sess,
                             on_progress=_on_progress,
                         )
                         # nightly returns OutboundMessage; extract .content
@@ -356,11 +418,11 @@ async def ws_chat(websocket: WebSocket) -> None:
                         except Exception:
                             pass
                     finally:
-                        lst = _web_captures.get(uid, [])
+                        lst = _web_captures.get(sess, [])
                         if capture_q in lst:
                             lst.remove(capture_q)
                         if not lst:
-                            _web_captures.pop(uid, None)
+                            _web_captures.pop(sess, None)
                         # Clean up finished task from tracking dict
                         session_tasks.pop(sess, None)
 
@@ -377,3 +439,6 @@ async def ws_chat(websocket: WebSocket) -> None:
             await websocket.send_json({"type": "error", "content": str(exc)})
         except Exception:
             pass
+    finally:
+        _unregister_cron_push(uid, cron_q)
+        cron_drain_task.cancel()

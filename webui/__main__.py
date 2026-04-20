@@ -138,10 +138,27 @@ async def main(
         cron_token = None
         if isinstance(cron_tool, CronTool):
             cron_token = cron_tool.set_cron_context(True)
+
+        # Web-channel jobs store the originating session key in payload.to
+        # (format: "web:<user_id>:<hex>") so we can replay the result directly
+        # into that session.  Legacy jobs stored only the numeric user ID.
+        to = job.payload.to or ""
+        is_web_session = job.payload.channel == "web" and to.startswith("web:")
+        is_web = job.payload.channel == "web" and bool(to)
+        if is_web_session:
+            # New format: to IS the session key — reuse it so the cron result
+            # appears in the same conversation that created the job.
+            session_key = to
+        elif is_web:
+            # Legacy format: to is just the user_id — fall back to per-job session
+            session_key = f"cron:{job.id}"
+        else:
+            session_key = f"cron:{job.id}:{int(time.time() * 1000)}"
+
         try:
             response = await agent.process_direct(
                 reminder_note,
-                session_key=f"cron:{job.id}:{int(time.time() * 1000)}",
+                session_key=session_key,
                 channel=job.payload.channel or "cli",
                 chat_id=job.payload.to or "direct",
             )
@@ -159,6 +176,24 @@ async def main(
                 chat_id=job.payload.to,
                 content=response,
             ))
+
+        # Push result to any active WebSocket connections for this user so
+        # the result appears inline without requiring a manual page refresh.
+        if is_web and response:
+            from webui.api.routes.ws import push_cron_result
+            # Extract user_id regardless of payload.to format:
+            #   new: "web:1:abc123" → "1"
+            #   legacy: "1"        → "1"
+            parts = to.split(":")
+            push_uid = parts[1] if len(parts) >= 3 else to
+            await push_cron_result(push_uid, {
+                "type": "cron_result",
+                "job_id": job.id,
+                "job_name": job.name,
+                "content": response,
+                "session_key": session_key,
+            })
+
         return response
 
     cron.on_job = on_cron_job
