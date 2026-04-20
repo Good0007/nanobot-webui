@@ -50,7 +50,17 @@
     "stopped": "Stopped",
     "error": "Error",
     "active": "Active",
-    "manageChannels": "Manage Channels →"
+    "manageChannels": "Manage Channels →",
+    "version": {
+      "title": "Version",
+      "upToDate": "Up to date",
+      "update": "Update",
+      "updating": "Updating...",
+      "updateSuccess": "Update complete, please restart to apply",
+      "updateFailed": "Update failed",
+      "updateHint": "Will restart to take effect",
+      "unknown": "unknown"
+    }
   },
   "chat": {
     "title": "Chat",

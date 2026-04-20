@@ -50,7 +50,17 @@
     "stopped": "Parado",
     "error": "Erro",
     "active": "Ativo",
-    "manageChannels": "Gerenciar Canais →"
+    "manageChannels": "Gerenciar Canais →",
+    "version": {
+      "title": "Versão",
+      "upToDate": "Atualizado",
+      "update": "Atualizar",
+      "updating": "Atualizando...",
+      "updateSuccess": "Atualização concluída, reinicie para aplicar",
+      "updateFailed": "Falha na atualização",
+      "updateHint": "Reinicialização necessária",
+      "unknown": "Desconhecido"
+    }
   },
   "chat": {
     "title": "Chat",

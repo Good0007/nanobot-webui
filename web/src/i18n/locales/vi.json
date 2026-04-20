@@ -50,7 +50,17 @@
     "stopped": "Đã dừng",
     "error": "Lỗi",
     "active": "Hoạt động",
-    "manageChannels": "Quản lý kênh →"
+    "manageChannels": "Quản lý kênh →",
+    "version": {
+      "title": "Thông tin phiên bản",
+      "upToDate": "Đã cập nhật",
+      "update": "Cập nhật",
+      "updating": "Đang cập nhật...",
+      "updateSuccess": "Cập nhật hoàn tất, vui lòng khởi động lại",
+      "updateFailed": "Cập nhật thất bại",
+      "updateHint": "Cần khởi động lại",
+      "unknown": "Không rõ"
+    }
   },
   "chat": {
     "title": "Trò chuyện",

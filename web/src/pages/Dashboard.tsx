@@ -1,18 +1,22 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { useChannels } from "../hooks/useChannels";
 import { useSkills } from "../hooks/useSkills";
 import { useCronJobs } from "../hooks/useCron";
 import { useSessions } from "../hooks/useSessions";
+import { useVersion, useUpdatePackages } from "../hooks/useVersion";
+import { useAuthStore } from "../stores/authStore";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { Badge } from "../components/ui/badge";
-import { Radio, Wrench, Clock, MessageSquare, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Radio, Wrench, Clock, MessageSquare, AlertCircle, CheckCircle2, XCircle, RefreshCw, PackageCheck } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export default function Dashboard() {
@@ -21,6 +25,10 @@ export default function Dashboard() {
   const { data: skills, isLoading: loadingSkills } = useSkills();
   const { data: cron, isLoading: loadingCron } = useCronJobs();
   const { data: sessions, isLoading: loadingSessions } = useSessions();
+  const { data: versionInfo, isLoading: loadingVersion, refetch: refetchVersion } = useVersion();
+  const updatePackages = useUpdatePackages();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === "admin";
 
   const runningChannels = channels?.filter((c) => c.running).length ?? 0;
   const totalChannels = channels?.length ?? 0;
@@ -163,6 +171,92 @@ export default function Dashboard() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Version info card */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between px-3 py-2.5 sm:px-6 sm:pb-3">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <PackageCheck className="h-4 w-4 text-muted-foreground" />
+            {t("dashboard.version.title")}
+          </CardTitle>
+          <button
+            onClick={() => refetchVersion()}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            disabled={loadingVersion}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", loadingVersion && "animate-spin")} />
+          </button>
+        </CardHeader>
+        <CardContent className="px-3 pb-3 sm:px-6">
+          {loadingVersion ? (
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {([
+                  { key: "nanobot_webui", label: "nanobot-webui" },
+                  { key: "nanobot", label: "nanobot-ai" },
+                ] as const).map(({ key, label }) => {
+                  const pkg = versionInfo?.[key];
+                  const hasUpdate = pkg?.latest && pkg.current !== "unknown" && pkg.latest !== pkg.current;
+                  return (
+                    <div key={key} className="flex items-center justify-between rounded-md border px-3 py-2 gap-2">
+                      <span className="font-mono text-sm font-medium">{label}</span>
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <span className="text-sm text-muted-foreground font-mono">
+                          {pkg?.current ?? t("dashboard.version.unknown")}
+                        </span>
+                        {pkg?.latest === null ? null : hasUpdate ? (
+                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 px-1.5 py-0">
+                            → {pkg?.latest}
+                          </Badge>
+                        ) : pkg?.latest ? (
+                          <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                            {t("dashboard.version.upToDate")}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {isAdmin && !!versionInfo && [
+                versionInfo.nanobot_webui,
+                versionInfo.nanobot,
+              ].some(
+                (pkg) => pkg?.latest && pkg.current !== "unknown" && pkg.latest !== pkg.current
+              ) && (
+                <div className="flex items-center gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={updatePackages.isPending}
+                    onClick={() =>
+                      updatePackages.mutate(undefined, {
+                        onSuccess: () => toast.success(t("dashboard.version.updateSuccess")),
+                        onError: (e: unknown) => toast.error(
+                          t("dashboard.version.updateFailed") + ": " +
+                          ((e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? String(e))
+                        ),
+                      })
+                    }
+                  >
+                    {updatePackages.isPending ? (
+                      <><RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />{t("dashboard.version.updating")}</>
+                    ) : (
+                      t("dashboard.version.update")
+                    )}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">{t("dashboard.version.updateHint")}</span>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

@@ -50,7 +50,17 @@
     "stopped": "已停止",
     "error": "錯誤",
     "active": "活躍",
-    "manageChannels": "管理頻道 →"
+    "manageChannels": "管理頻道 →",
+    "version": {
+      "title": "版本資訊",
+      "upToDate": "已是最新",
+      "update": "一鍵更新",
+      "updating": "更新中...",
+      "updateSuccess": "更新完成，請重啟服務生效",
+      "updateFailed": "更新失敗",
+      "updateHint": "重啟後生效",
+      "unknown": "未知"
+    }
   },
   "chat": {
     "title": "對話",

@@ -50,7 +50,17 @@
     "stopped": "Detenido",
     "error": "Error",
     "active": "Activo",
-    "manageChannels": "Gestionar canales →"
+    "manageChannels": "Gestionar canales →",
+    "version": {
+      "title": "Versión",
+      "upToDate": "Actualizado",
+      "update": "Actualizar",
+      "updating": "Actualizando...",
+      "updateSuccess": "Actualización completa, reinicie para aplicar",
+      "updateFailed": "Error al actualizar",
+      "updateHint": "Requiere reinicio",
+      "unknown": "Desconocido"
+    }
   },
   "chat": {
     "title": "Chat",

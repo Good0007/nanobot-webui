@@ -140,25 +140,21 @@ async def main(
             cron_token = cron_tool.set_cron_context(True)
 
         # Web-channel jobs store the originating session key in payload.to
-        # (format: "web:<user_id>:<hex>") so we can replay the result directly
-        # into that session.  Legacy jobs stored only the numeric user ID.
+        # (format: "web:<user_id>:<hex>") so we can push the result back there.
         to = job.payload.to or ""
         is_web_session = job.payload.channel == "web" and to.startswith("web:")
         is_web = job.payload.channel == "web" and bool(to)
-        if is_web_session:
-            # New format: to IS the session key — reuse it so the cron result
-            # appears in the same conversation that created the job.
-            session_key = to
-        elif is_web:
-            # Legacy format: to is just the user_id — fall back to per-job session
-            session_key = f"cron:{job.id}"
-        else:
-            session_key = f"cron:{job.id}:{int(time.time() * 1000)}"
+
+        # Always execute in an isolated timestamped session so:
+        #   1. Each run gets a clean LLM context (v0.2.4 design)
+        #   2. The internal [Scheduled Task] trigger message never appears in
+        #      the user's originating session
+        exec_session_key = f"cron:{job.id}:{int(time.time() * 1000)}"
 
         try:
             response = await agent.process_direct(
                 reminder_note,
-                session_key=session_key,
+                session_key=exec_session_key,
                 channel=job.payload.channel or "cli",
                 chat_id=job.payload.to or "direct",
             )
@@ -177,8 +173,20 @@ async def main(
                 content=response,
             ))
 
-        # Push result to any active WebSocket connections for this user so
-        # the result appears inline without requiring a manual page refresh.
+        # For web-session jobs: append only the final AI response to the
+        # originating session — no trigger message pollution, history untouched.
+        if is_web_session and response:
+            from datetime import datetime
+            orig_sess = agent.sessions.get_or_create(to)
+            orig_sess.messages.append({
+                "role": "assistant",
+                "content": response,
+            })
+            orig_sess.updated_at = datetime.now()
+            agent.sessions.save(orig_sess)
+
+        # Push result to any active WebSocket connections so the browser
+        # refreshes the session and shows a toast notification.
         if is_web and response:
             from webui.api.routes.ws import push_cron_result
             # Extract user_id regardless of payload.to format:
@@ -186,12 +194,16 @@ async def main(
             #   legacy: "1"        → "1"
             parts = to.split(":")
             push_uid = parts[1] if len(parts) >= 3 else to
+            # session_key in the push payload tells the frontend which session
+            # to refresh — the originating session for new format, cron session
+            # for legacy.
+            notify_session = to if is_web_session else exec_session_key
             await push_cron_result(push_uid, {
                 "type": "cron_result",
                 "job_id": job.id,
                 "job_name": job.name,
                 "content": response,
-                "session_key": session_key,
+                "session_key": notify_session,
             })
 
         return response

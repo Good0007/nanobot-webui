@@ -50,7 +50,17 @@
     "stopped": "已停止",
     "error": "错误",
     "active": "活跃",
-    "manageChannels": "管理通道 →"
+    "manageChannels": "管理通道 →",
+    "version": {
+      "title": "版本信息",
+      "upToDate": "已是最新",
+      "update": "一键更新",
+      "updating": "更新中...",
+      "updateSuccess": "更新完成，请重启服务生效",
+      "updateFailed": "更新失败",
+      "updateHint": "重启后生效",
+      "unknown": "未知"
+    }
   },
   "chat": {
     "title": "会话",
