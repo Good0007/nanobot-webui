@@ -50,7 +50,7 @@ def apply() -> None:
         if path.exists():
             path.unlink()
 
-    _session_manager.SessionManager.delete = _session_delete  # type: ignore[attr-defined]
+    _session_manager.SessionManager.delete_session = _session_delete  # type: ignore[attr-defined]
 
     # --- list_sessions with last_message preview --------------------------
     # The installed nanobot-ai package's list_sessions does not include

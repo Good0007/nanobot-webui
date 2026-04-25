@@ -12,20 +12,34 @@ from __future__ import annotations
 
 def apply() -> None:
     import asyncio
+    import inspect
     from contextlib import AsyncExitStack
 
     from nanobot.agent.loop import AgentLoop
     from nanobot.agent.tools.mcp import connect_mcp_servers
 
-    _orig_init = AgentLoop.__init__
-    _orig_close = AgentLoop.close_mcp
+    _connect_uses_stack = len(inspect.signature(connect_mcp_servers).parameters) >= 3
 
-    # ------------------------------------------------------------------
-    # __init__: add _mcp_server_stacks tracking dict
-    # ------------------------------------------------------------------
-    def _init_patched(self, *args, **kwargs):
-        _orig_init(self, *args, **kwargs)
-        self._mcp_server_stacks: dict[str, AsyncExitStack] = {}
+    async def _connect_subset(servers: dict, registry):
+        """Compatibility shim for nanobot MCP connector signature changes."""
+        if not _connect_uses_stack:
+            return await connect_mcp_servers(servers, registry)
+
+        # Legacy signature: connect_mcp_servers(servers, registry, stack)
+        connected: dict[str, AsyncExitStack] = {}
+        for name, cfg in servers.items():
+            stack = AsyncExitStack()
+            await stack.__aenter__()
+            try:
+                await connect_mcp_servers({name: cfg}, registry, stack)
+                connected[name] = stack
+            except Exception:
+                try:
+                    await stack.aclose()
+                except Exception:
+                    pass
+                raise
+        return connected
 
     # ------------------------------------------------------------------
     # _connect_mcp: connect each enabled server into its own stack
@@ -40,18 +54,12 @@ def apply() -> None:
             for name, cfg in self._mcp_servers.items():
                 if not is_mcp_server_enabled(name):
                     continue
-                if name in self._mcp_server_stacks:
+                if name in self._mcp_stacks:
                     continue  # already connected
-                stack = AsyncExitStack()
-                await stack.__aenter__()
                 try:
-                    await connect_mcp_servers({name: cfg}, self.tools, stack)
-                    self._mcp_server_stacks[name] = stack
+                    self._mcp_stacks.update(await _connect_subset({name: cfg}, self.tools))
                 except Exception:
-                    try:
-                        await stack.aclose()
-                    except Exception:
-                        pass
+                    continue
             self._mcp_connected = True
         finally:
             self._mcp_connecting = False
@@ -63,14 +71,13 @@ def apply() -> None:
         if self._background_tasks:
             await asyncio.gather(*self._background_tasks, return_exceptions=True)
             self._background_tasks.clear()
-        for stack in list(self._mcp_server_stacks.values()):
+        for stack in list(self._mcp_stacks.values()):
             try:
                 await stack.aclose()
             except (RuntimeError, BaseExceptionGroup):
                 pass
-        self._mcp_server_stacks.clear()
+        self._mcp_stacks.clear()
         self._mcp_connected = False
-        self._mcp_stack = None  # keep legacy attribute in sync
 
     # ------------------------------------------------------------------
     # toggle_mcp_server: load or unload a single server at runtime
@@ -85,7 +92,7 @@ def apply() -> None:
             for k in to_remove:
                 self.tools.unregister(k)
             # Close and discard the server's stack
-            stack = self._mcp_server_stacks.pop(name, None)
+            stack = self._mcp_stacks.pop(name, None)
             if stack:
                 try:
                     await stack.aclose()
@@ -93,21 +100,13 @@ def apply() -> None:
                     pass
         else:
             # Don't double-connect
-            if name in self._mcp_server_stacks:
+            if name in self._mcp_stacks:
                 return
-            stack = AsyncExitStack()
-            await stack.__aenter__()
             try:
-                await connect_mcp_servers({name: cfg}, self.tools, stack)
-                self._mcp_server_stacks[name] = stack
+                self._mcp_stacks.update(await _connect_subset({name: cfg}, self.tools))
             except Exception:
-                try:
-                    await stack.aclose()
-                except Exception:
-                    pass
                 raise
 
-    AgentLoop.__init__ = _init_patched  # type: ignore[method-assign]
     AgentLoop._connect_mcp = _connect_mcp_patched  # type: ignore[method-assign]
     AgentLoop.close_mcp = _close_mcp_patched  # type: ignore[method-assign]
     AgentLoop.toggle_mcp_server = _toggle_mcp_server  # type: ignore[attr-defined]

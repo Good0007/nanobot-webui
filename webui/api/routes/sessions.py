@@ -124,4 +124,4 @@ async def delete_session(
     if not _is_own_session(key, current_user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Access denied")
 
-    svc.session_manager.delete(key)
+    svc.session_manager.delete_session(key)
