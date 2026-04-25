@@ -1,5 +1,41 @@
 # Release Notes
 
+## v0.2.9 — 2026-04-25
+
+### Dashboard — Version & Update Panel
+
+- Added a **Version Info** card to the Dashboard: shows current and latest versions of `nanobot-webui` and `nanobot-ai`, with a one-click **Update** button (admin only) that streams live pip/uv upgrade output in real time via SSE
+- `nanobot-ai` version is derived from the `nanobot-webui` dependency spec so it always reflects the intended bundled version, not an independently tracked PyPI release
+- New `GET /api/system/version` and `POST /api/system/update` routes added to the backend (`webui/api/routes/system.py`)
+- New `useVersion` / `useUpdatePackages` hooks added to the frontend (`web/src/hooks/useVersion.ts`)
+
+### Exec Environment Variable Injection
+
+- Added `exec_env` and `exec_env_passthrough` settings in the **Agent** tab of the Settings page
+  - `exec_env`: static key=value pairs (e.g. `JAVA_HOME`, `NODE_ENV`) injected into every ExecTool invocation
+  - `exec_env_passthrough`: allowlist of parent-process env-var names (e.g. `OPENAI_API_KEY`) forwarded at exec time without being stored to disk
+- Backend patch `webui/patches/exec_env.py` monkey-patches `ExecTool._build_env` to merge the configured vars while preserving ExecTool's minimal-environment security model
+- Input validation in `PATCH /api/config/agent` rejects empty keys, non-identifier names, and a security denylist (`LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, `PYTHONPATH`, `NODE_PATH`, etc.)
+
+### SubAgent Bug Fixes
+
+- Fixed extra sessions appearing in the sidebar after a SubAgent task completes
+  - Root cause: `_run_subagent_patched` computed `chat_key = "web:web:1:abc12345"` (double-prefixed) instead of `"web:1"`, causing registry lookups to always miss and the fallback path to create a spurious session
+  - Fix: detect when `chat_id` is already a full session key (`web:{uid}:{suffix}`) and extract only the uid part before constructing `chat_key`
+  - Applied to both `_run_subagent_patched` and `_announce_result_patched` in `webui/patches/subagent.py`
+
+### Chat Artifact Preview Fix
+
+- Fixed artifact file-preview cards (e.g. `write_file` output) disappearing when "Show tool messages" is enabled
+  - Root cause: `SubAgentToolBlock` rendered only the collapsible call card without the `ArtifactPreview` rows that `ToolResultBlock` already included
+  - Fix: wrap the return in a Fragment and render `ArtifactPreview` cards below the call card, consistent with the normal tool result rendering
+
+### Dependency
+
+- Bumped `nanobot-ai` dependency to `==0.1.5.post2`
+
+---
+
 ## v0.2.8 — 2026-04-19
 
 ### Chat Artifact Preview
