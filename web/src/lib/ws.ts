@@ -1,6 +1,6 @@
 import { useAuthStore } from "../stores/authStore";
 
-export type WsMessageType = "session_info" | "progress" | "subagent_progress" | "done" | "error" | "revoke_ok";
+export type WsMessageType = "session_info" | "progress" | "subagent_progress" | "done" | "error" | "revoke_ok" | "cron_result";
 
 export interface WsMessage {
   type: WsMessageType;
@@ -8,6 +8,7 @@ export interface WsMessage {
   session_key?: string;
   tool_hint?: boolean;
   index?: number;
+  job_name?: string;
 }
 
 type MessageHandler = (msg: WsMessage) => void;
