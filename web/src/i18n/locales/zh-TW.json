@@ -50,7 +50,18 @@
     "stopped": "已停止",
     "error": "錯誤",
     "active": "活躍",
-    "manageChannels": "管理頻道 →"
+    "manageChannels": "管理頻道 →",
+    "version": {
+      "title": "版本資訊",
+      "upToDate": "已是最新",
+      "update": "一鍵更新",
+      "updating": "更新中...",
+      "updateSuccess": "更新完成，請重啟服務生效",
+      "updateFailed": "更新失敗",
+      "updateHint": "重啟後生效",
+      "bundled": "隨 webui 更新",
+      "unknown": "未知"
+    }
   },
   "chat": {
     "title": "對話",
@@ -388,6 +399,10 @@
     "execSandboxBwrap": "Bubblewrap (bwrap)",
     "execTimeout": "Execution Timeout (s)",
     "pathAppend": "Append to PATH",
+    "execEnv": "靜態環境變數",
+    "execEnvDesc": "注入到每次腳本執行中的 KEY=VALUE 鍵值對，每行一條。適合非敏感的設定值。",
+    "execEnvPassthrough": "環境變數透傳白名單",
+    "execEnvPassthroughDesc": "從伺服器自身環境中按名稱透傳的變數，每行一個名稱。適合不應儲存在設定檔中的金鑰。",
     "restrictToWorkspace": "Restrict Access to Workspace",
     "security": "Security",
     "ssrfWhitelist": "SSRF Whitelist (CIDR)",

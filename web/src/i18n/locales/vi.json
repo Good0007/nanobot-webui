@@ -50,7 +50,18 @@
     "stopped": "Đã dừng",
     "error": "Lỗi",
     "active": "Hoạt động",
-    "manageChannels": "Quản lý kênh →"
+    "manageChannels": "Quản lý kênh →",
+    "version": {
+      "title": "Thông tin phiên bản",
+      "upToDate": "Đã cập nhật",
+      "update": "Cập nhật",
+      "updating": "Đang cập nhật...",
+      "updateSuccess": "Cập nhật hoàn tất, vui lòng khởi động lại",
+      "updateFailed": "Cập nhật thất bại",
+      "updateHint": "Cần khởi động lại",
+      "bundled": "Được quản lý bởi webui",
+      "unknown": "Không rõ"
+    }
   },
   "chat": {
     "title": "Trò chuyện",
@@ -411,6 +422,10 @@
     "execSandboxBwrap": "Bubblewrap (bwrap)",
     "execTimeout": "Execution Timeout (s)",
     "pathAppend": "Append to PATH",
+    "execEnv": "Biến môi trường tĩnh",
+    "execEnvDesc": "Các cặp KEY=VALUE được đưa vào mỗi lần chạy script, mỗi dòng một cặp. Phù hợp với các giá trị cấu hình không nhạy cảm.",
+    "execEnvPassthrough": "Danh sách biến môi trường cho phép",
+    "execEnvPassthroughDesc": "Tên các biến từ môi trường máy chủ sẽ được truyền qua, mỗi dòng một tên. Dùng cho các bí mật không nên lưu trong file cấu hình.",
     "restrictToWorkspace": "Restrict Access to Workspace",
     "security": "Bảo mật",
     "ssrfWhitelist": "SSRF Whitelist (CIDR)",

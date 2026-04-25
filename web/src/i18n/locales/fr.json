@@ -50,7 +50,18 @@
     "stopped": "Arrêté",
     "error": "Erreur",
     "active": "Actif",
-    "manageChannels": "Gérer les canaux →"
+    "manageChannels": "Gérer les canaux →",
+    "version": {
+      "title": "Version",
+      "upToDate": "À jour",
+      "update": "Mettre à jour",
+      "updating": "Mise à jour...",
+      "updateSuccess": "Mise à jour terminée, redémarrez pour appliquer",
+      "updateFailed": "Échec de la mise à jour",
+      "updateHint": "Redémarrage requis",
+      "bundled": "Géré par webui",
+      "unknown": "Inconnu"
+    }
   },
   "chat": {
     "title": "Chat",
@@ -388,6 +399,10 @@
     "execSandboxBwrap": "Bubblewrap (bwrap)",
     "execTimeout": "Execution Timeout (s)",
     "pathAppend": "Append to PATH",
+    "execEnv": "Variables d'environnement statiques",
+    "execEnvDesc": "Paires KEY=VALUE injectées à chaque exécution de script, une par ligne. Adapté aux valeurs de configuration non sensibles.",
+    "execEnvPassthrough": "Liste blanche de variables d'environnement",
+    "execEnvPassthroughDesc": "Noms des variables de l'environnement serveur à transmettre, un par ligne. Pour les secrets qui ne doivent pas être stockés dans les fichiers de configuration.",
     "restrictToWorkspace": "Restrict Access to Workspace",
     "security": "Security",
     "ssrfWhitelist": "SSRF Whitelist (CIDR)",

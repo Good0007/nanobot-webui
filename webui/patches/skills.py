@@ -32,16 +32,20 @@ def apply() -> None:
 
     # Patch 5b: build_skills_summary — temporarily shadow list_skills on the
     # instance so the XML it builds omits disabled skills entirely.
-    def _build_summary_patched(self) -> str:
+    def _build_summary_patched(self, exclude: set[str] | None = None) -> str:
         disabled = get_disabled_skills()
         if not disabled:
-            return _orig_build_summary(self)
+            return _orig_build_summary(self, exclude=exclude)
         orig_list = self.list_skills
-        self.list_skills = lambda filter_unavailable=True: [   # type: ignore[method-assign]
-            s for s in orig_list(filter_unavailable) if s["name"] not in disabled
-        ]
+
+        def _list_skills_filtered(filter_unavailable: bool = True):
+            return [
+                s for s in orig_list(filter_unavailable=filter_unavailable) if s["name"] not in disabled
+            ]
+
+        self.list_skills = _list_skills_filtered  # type: ignore[method-assign]
         try:
-            return _orig_build_summary(self)
+            return _orig_build_summary(self, exclude=exclude)
         finally:
             del self.list_skills  # restore class method lookup
 

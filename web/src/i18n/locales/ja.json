@@ -50,7 +50,18 @@
     "stopped": "停止",
     "error": "エラー",
     "active": "アクティブ",
-    "manageChannels": "チャンネル管理 →"
+    "manageChannels": "チャンネル管理 →",
+    "version": {
+      "title": "バージョン情報",
+      "upToDate": "最新版",
+      "update": "アップデート",
+      "updating": "更新中...",
+      "updateSuccess": "更新完了、再起動して適用してください",
+      "updateFailed": "更新失敗",
+      "updateHint": "再起動が必要です",
+      "bundled": "webui と同期更新",
+      "unknown": "不明"
+    }
   },
   "chat": {
     "title": "チャット",
@@ -388,6 +399,10 @@
     "execSandboxBwrap": "Bubblewrap (bwrap)",
     "execTimeout": "Execution Timeout (s)",
     "pathAppend": "Append to PATH",
+    "execEnv": "静的環境変数",
+    "execEnvDesc": "スクリプト実行ごとに注入される KEY=VALUE ペア（1行1件）。機密でない設定値に適しています。",
+    "execEnvPassthrough": "環境変数パススルー",
+    "execEnvPassthroughDesc": "サーバー自身の環境から渡す変数名（1行1件）。設定ファイルに保存すべきでないシークレットに使用してください。",
     "restrictToWorkspace": "Restrict Access to Workspace",
     "security": "Security",
     "ssrfWhitelist": "SSRF Whitelist (CIDR)",

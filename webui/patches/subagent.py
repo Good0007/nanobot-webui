@@ -189,6 +189,7 @@ def apply() -> None:
         task: str,
         label: str,
         origin: dict[str, str],
+        status: Any = None,
     ) -> None:
         """Augmented _run_subagent: uses AgentRunner + hook for progress push."""
         from nanobot.agent.hook import AgentHook, AgentHookContext
@@ -202,7 +203,15 @@ def apply() -> None:
 
         channel = origin.get("channel", "")
         chat_id = str(origin.get("chat_id", ""))
-        chat_key = f"{channel}:{chat_id}"
+        # For web channel, ws.py passes the full session key as chat_id
+        # (e.g. "web:1:abc12345") so that CronTool can use it.  But the
+        # SubAgent callback registry uses just "web:{uid}" as the key.
+        # Detect this pattern and extract only the uid segment.
+        if channel == "web" and chat_id.startswith("web:") and chat_id.count(":") >= 2:
+            _uid_part = chat_id.split(":", 2)[1]
+            chat_key = f"web:{_uid_part}"
+        else:
+            chat_key = f"{channel}:{chat_id}"
         # For cron sessions, origin["session_key"] may differ from chat_key;
         # persist sub-agent messages to the correct session when available.
         save_session_key = origin.get("session_key") or chat_key
@@ -334,11 +343,17 @@ def apply() -> None:
                     except Exception:
                         pass
 
+            if status is not None:
+                status.phase = "done"
+                status.stop_reason = result.stop_reason
             await self._announce_result(task_id, label, task, enriched_result, origin, "ok")
 
         except Exception as e:
             error_msg = f"Error: {e}"
             logger.error("Subagent [{}] failed: {}", task_id, e)
+            if status is not None:
+                status.phase = "error"
+                status.error = str(e)
             await self._announce_result(task_id, label, task, error_msg, origin, "error")
 
     # -----------------------------------------------------------------------
@@ -357,7 +372,12 @@ def apply() -> None:
     ) -> None:
         channel = origin.get("channel", "")
         chat_id = str(origin.get("chat_id", ""))
-        chat_key = f"{channel}:{chat_id}"
+        # Same web-channel session-key-as-chat_id fix as in _run_subagent_patched.
+        if channel == "web" and chat_id.startswith("web:") and chat_id.count(":") >= 2:
+            _uid_part = chat_id.split(":", 2)[1]
+            chat_key = f"web:{_uid_part}"
+        else:
+            chat_key = f"{channel}:{chat_id}"
 
         if channel == "web":
             cb = _announce_registry.get(chat_key)

@@ -50,7 +50,18 @@
     "stopped": "중지됨",
     "error": "오류",
     "active": "활성",
-    "manageChannels": "채널 관리 →"
+    "manageChannels": "채널 관리 →",
+    "version": {
+      "title": "버전 정보",
+      "upToDate": "최신 버전",
+      "update": "업데이트",
+      "updating": "업데이트 중...",
+      "updateSuccess": "업데이트 완료, 재시작 후 적용됩니다",
+      "updateFailed": "업데이트 실패",
+      "updateHint": "재시작 필요",
+      "bundled": "webui와 함께 업데이트",
+      "unknown": "알 수 없음"
+    }
   },
   "chat": {
     "title": "채팅",
@@ -388,6 +399,10 @@
     "execSandboxBwrap": "Bubblewrap (bwrap)",
     "execTimeout": "Execution Timeout (s)",
     "pathAppend": "Append to PATH",
+    "execEnv": "정적 환경 변수",
+    "execEnvDesc": "스크립트 실행 시 주입할 KEY=VALUE 쌍, 한 줄에 하나씩. 민감하지 않은 설정 값에 적합합니다.",
+    "execEnvPassthrough": "환경 변수 전달 허용 목록",
+    "execEnvPassthroughDesc": "서버 환경에서 전달할 변수 이름, 한 줄에 하나씩. 설정 파일에 저장하지 않아야 하는 비밀 값에 사용하세요.",
     "restrictToWorkspace": "Restrict Access to Workspace",
     "security": "Security",
     "ssrfWhitelist": "SSRF Whitelist (CIDR)",

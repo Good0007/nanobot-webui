@@ -50,7 +50,18 @@
     "stopped": "Stopped",
     "error": "Error",
     "active": "Active",
-    "manageChannels": "Manage Channels →"
+    "manageChannels": "Manage Channels →",
+    "version": {
+      "title": "Version",
+      "upToDate": "Up to date",
+      "update": "Update",
+      "updating": "Updating...",
+      "updateSuccess": "Update complete, please restart to apply",
+      "updateFailed": "Update failed",
+      "updateHint": "Will restart to take effect",
+      "bundled": "Managed by webui",
+      "unknown": "unknown"
+    }
   },
   "chat": {
     "title": "Chat",
@@ -373,6 +384,10 @@
     "execSandboxBwrap": "Bubblewrap (bwrap)",
     "execTimeout": "Execution Timeout (s)",
     "pathAppend": "Append to PATH",
+    "execEnv": "Static Environment Variables",
+    "execEnvDesc": "KEY=VALUE pairs injected into every script run, one per line. Suitable for non-secret config values.",
+    "execEnvPassthrough": "Environment Variable Passthrough",
+    "execEnvPassthroughDesc": "Names of variables to pass from the server's own environment, one per line. Use this for secrets that should not be stored in config files.",
     "restrictToWorkspace": "Restrict Access to Workspace",
     "security": "Security",
     "ssrfWhitelist": "SSRF Whitelist (CIDR)",

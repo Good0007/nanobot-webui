@@ -41,6 +41,7 @@ def create_app(container: ServiceContainer | None = None) -> FastAPI:
         providers,
         sessions,
         skills,
+        system,
         users,
         workspace,
         ws,
@@ -55,6 +56,7 @@ def create_app(container: ServiceContainer | None = None) -> FastAPI:
     app.include_router(cron.router, prefix="/api/cron", tags=["cron"])
     app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
     app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(system.router, prefix="/api/system", tags=["system"])
     app.include_router(workspace.router, prefix="/api/workspace", tags=["workspace"])
     app.include_router(ws.router, tags=["ws"])
     app.include_router(openai_proxy.router)

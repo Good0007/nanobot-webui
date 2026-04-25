@@ -30,7 +30,13 @@ Top-level schema (all sections optional, defaults shown):
         "users": [],
 
         // Custom Providers (user-defined custom OpenAI-compatible providers)
-        "custom_providers": {}
+        "custom_providers": {},
+
+        // Exec environment variables
+        // exec_env: static key-value pairs injected into every ExecTool run
+        // exec_env_passthrough: env-var names read from parent process at exec time
+        "exec_env": {},
+        "exec_env_passthrough": []
     }
 
 Usage
@@ -81,6 +87,8 @@ _DEFAULTS: dict[str, Any] = {
     "s3": _S3_DEFAULTS,
     "provider_meta": {},
     "users": [],
+    "exec_env": {},
+    "exec_env_passthrough": [],
 }
 
 
@@ -285,3 +293,33 @@ def delete_custom_provider(name: str) -> bool:
         save(state)
         return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# Exec environment variables
+# ---------------------------------------------------------------------------
+
+# [AI:START] tool=copilot date=2026-04-20 author=chenweikang
+def get_exec_env() -> dict[str, str]:
+    """Return static env-var key-value pairs to inject into ExecTool runs."""
+    return dict(load().get("exec_env", {}))
+
+
+def set_exec_env(env: dict[str, str]) -> None:
+    """Persist static exec env vars.  Pass an empty dict to clear."""
+    state = load()
+    state["exec_env"] = dict(env)
+    save(state)
+
+
+def get_exec_env_passthrough() -> list[str]:
+    """Return the list of parent-process env-var names to pass through to ExecTool."""
+    return list(load().get("exec_env_passthrough", []))
+
+
+def set_exec_env_passthrough(names: list[str]) -> None:
+    """Persist the exec env passthrough allowlist.  Pass an empty list to clear."""
+    state = load()
+    state["exec_env_passthrough"] = list(names)
+    save(state)
+# [AI:END]

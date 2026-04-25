@@ -222,6 +222,7 @@ function SubAgentToolBlock({ message }: { message: ChatMessage }) {
   const [open, setOpen] = useState(false);
 
   return (
+    <>
     <div className={cn(
       "rounded-lg border text-xs overflow-hidden",
       isError
@@ -269,6 +270,10 @@ function SubAgentToolBlock({ message }: { message: ChatMessage }) {
         </div>
       )}
     </div>
+    {!isError && extractArtifactPaths(message.content).map((p) => (
+      <ArtifactPreview key={p} filePath={p} />
+    ))}
+    </>
   );
 }
 

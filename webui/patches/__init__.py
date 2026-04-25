@@ -11,11 +11,12 @@ session     [Session]     Add SessionManager.delete for UI-initiated deletion.
 provider    [Provider]    Auto-fall-back to OpenAI /v1/responses when needed.
 skills      [Skills]      Honour .disabled_skills.json from the WebUI toggle.
 subagent    [SubAgent]    Push tool-call progress to WebUI / external channels.
+exec_env    [ExecEnv]     Inject admin-configured env vars into ExecTool runs.
 """
 
 from __future__ import annotations
 
-from webui.patches import channels, mcp_dynamic, provider, session, skills, subagent, config
+from webui.patches import channels, exec_env, mcp_dynamic, provider, session, skills, subagent, config
 
 
 def apply_all() -> None:
@@ -27,3 +28,4 @@ def apply_all() -> None:
     provider.apply()
     skills.apply()
     subagent.apply()
+    exec_env.apply()     # patches ExecTool._build_env to inject configured env vars
