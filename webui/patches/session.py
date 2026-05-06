@@ -76,8 +76,8 @@ def apply() -> None:
     # is also assistant — the system line separates them).
     _orig_get_history = _session_manager.Session.get_history
 
-    def _get_history_patched(self, max_messages: int = 500):  # type: ignore[override]
-        history = _orig_get_history(self, max_messages)
+    def _get_history_patched(self, *args, **kwargs):  # type: ignore[override]
+        history = _orig_get_history(self, *args, **kwargs)
         return [m for m in history if m.get("role") != "sub_tool"]
 
     _session_manager.Session.get_history = _get_history_patched  # type: ignore[method-assign]
