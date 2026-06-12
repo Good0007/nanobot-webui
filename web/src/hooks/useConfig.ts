@@ -49,6 +49,14 @@ export interface AgentSettings {
   tool_hint_max_length?: number;
   context_block_limit?: number | null;
   fallback_models?: string[];
+  // v0.2.0+ Image Generation
+  img_gen_enabled?: boolean;
+  img_gen_provider?: string;
+  img_gen_model?: string;
+  img_gen_default_aspect_ratio?: string;
+  img_gen_default_image_size?: string;
+  img_gen_max_images_per_turn?: number;
+  img_gen_save_dir?: string;
 }
 
 export interface GatewayConfig {

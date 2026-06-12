@@ -139,6 +139,14 @@ async def get_agent_settings(
         # fallback_models: 提取简单字符串列表 (排除 InlineFallbackConfig 对象)
         fallback_models=[m if isinstance(m, str) else getattr(m, 'model', str(m))
                          for m in d.fallback_models],
+        # Image Generation tool config
+        img_gen_enabled=t.image_generation.enabled,
+        img_gen_provider=t.image_generation.provider,
+        img_gen_model=t.image_generation.model,
+        img_gen_default_aspect_ratio=t.image_generation.default_aspect_ratio,
+        img_gen_default_image_size=t.image_generation.default_image_size,
+        img_gen_max_images_per_turn=t.image_generation.max_images_per_turn,
+        img_gen_save_dir=t.image_generation.save_dir,
     )
 
 
@@ -243,6 +251,20 @@ async def update_agent_settings(
         d.context_block_limit = body.context_block_limit
     if body.fallback_models is not None:
         d.fallback_models = body.fallback_models
+    if body.img_gen_enabled is not None:
+        t.image_generation.enabled = body.img_gen_enabled
+    if body.img_gen_provider is not None:
+        t.image_generation.provider = body.img_gen_provider
+    if body.img_gen_model is not None:
+        t.image_generation.model = body.img_gen_model
+    if body.img_gen_default_aspect_ratio is not None:
+        t.image_generation.default_aspect_ratio = body.img_gen_default_aspect_ratio
+    if body.img_gen_default_image_size is not None:
+        t.image_generation.default_image_size = body.img_gen_default_image_size
+    if body.img_gen_max_images_per_turn is not None:
+        t.image_generation.max_images_per_turn = body.img_gen_max_images_per_turn
+    if body.img_gen_save_dir is not None:
+        t.image_generation.save_dir = body.img_gen_save_dir
 
     save_config(svc.config)
     svc.reload_provider()

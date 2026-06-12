@@ -362,6 +362,29 @@ function AgentTab() {
   const [dreamMaxBatchSize, setDreamMaxBatchSize] = useState("20");
   const [dreamMaxIterations, setDreamMaxIterations] = useState("10");
 
+  // Image Generation state
+  const [imgGenEnabled, setImgGenEnabled] = useState(false);
+  const [imgGenProvider, setImgGenProvider] = useState("openrouter");
+  const [imgGenModel, setImgGenModel] = useState("openai/gpt-5.4-image-2");
+  const [imgGenAspectRatio, setImgGenAspectRatio] = useState("1:1");
+  const [imgGenImageSize, setImgGenImageSize] = useState("1K");
+  const [imgGenMaxPerTurn, setImgGenMaxPerTurn] = useState("4");
+  const [imgGenSaveDir, setImgGenSaveDir] = useState("generated");
+
+  // Providers that natively support image generation in nanobot v0.2.1
+  const IMG_GEN_PROVIDERS = new Set([
+    "openai", "openrouter", "zhipu", "stepfun", "ollama", "openai_codex", "gemini",
+  ]);
+  const IMG_GEN_DEFAULT_MODELS: Record<string, string> = {
+    openai: "dall-e-3",
+    openrouter: "openai/gpt-5.4-image-2",
+    zhipu: "cogview-3-plus",
+    stepfun: "step-image-edit-2",
+    ollama: "llava:latest",
+    openai_codex: "gpt-5.4-image-2",
+    gemini: "gemini-2.5-flash-image-preview",
+  };
+
   // Channels state
   const [sendMaxRetries, setSendMaxRetries] = useState("3");
   const [transcriptionProvider, setTranscriptionProvider] = useState("groq");
@@ -435,6 +458,14 @@ function AgentTab() {
     setToolHintMaxLength(String(agent.tool_hint_max_length ?? 40));
     setContextBlockLimit(agent.context_block_limit ? String(agent.context_block_limit) : "");
     setFallbackModels(agent.fallback_models ?? []);
+    // Image Generation
+    setImgGenEnabled(agent.img_gen_enabled ?? false);
+    setImgGenProvider(agent.img_gen_provider ?? "openrouter");
+    setImgGenModel(agent.img_gen_model ?? "openai/gpt-5.4-image-2");
+    setImgGenAspectRatio(agent.img_gen_default_aspect_ratio ?? "1:1");
+    setImgGenImageSize(agent.img_gen_default_image_size ?? "1K");
+    setImgGenMaxPerTurn(String(agent.img_gen_max_images_per_turn ?? 4));
+    setImgGenSaveDir(agent.img_gen_save_dir ?? "generated");
     setAgentInited(true);
   }
 
@@ -516,6 +547,18 @@ function AgentTab() {
       dream_model_override: dreamModelOverride || null,
       dream_max_batch_size: dreamMaxBatchSize ? Number(dreamMaxBatchSize) : undefined,
       dream_max_iterations: dreamMaxIterations ? Number(dreamMaxIterations) : undefined,
+    }, { onSuccess: () => toast.success(t("settings.saved")) });
+  };
+
+  const handleSaveImageGen = () => {
+    updateAgent.mutate({
+      img_gen_enabled: imgGenEnabled,
+      img_gen_provider: imgGenProvider || undefined,
+      img_gen_model: imgGenModel || undefined,
+      img_gen_default_aspect_ratio: imgGenAspectRatio || undefined,
+      img_gen_default_image_size: imgGenImageSize || undefined,
+      img_gen_max_images_per_turn: imgGenMaxPerTurn ? Number(imgGenMaxPerTurn) : undefined,
+      img_gen_save_dir: imgGenSaveDir || undefined,
     }, { onSuccess: () => toast.success(t("settings.saved")) });
   };
 
@@ -896,6 +939,75 @@ function AgentTab() {
           <div className="flex justify-end sm:justify-start">
             <Button onClick={handleSaveDream} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Image Generation card ───────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">🎨 {t("settings.imageGeneration")}</CardTitle>
+          <CardDescription>{t("settings.imageGenerationDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Switch checked={imgGenEnabled} onCheckedChange={setImgGenEnabled} id="img-gen-enable" />
+            <Label htmlFor="img-gen-enable">{t("settings.enable")}</Label>
+          </div>
+          {imgGenEnabled && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>{t("settings.imgGenProvider")}</Label>
+                  <Select value={imgGenProvider} onValueChange={(v) => { setImgGenProvider(v); setImgGenModel(IMG_GEN_DEFAULT_MODELS[v] ?? ""); }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(providers ?? []).filter(p => IMG_GEN_PROVIDERS.has(p.name) && p.has_key).map(p => (
+                        <SelectItem key={p.name} value={p.name}>{PROVIDER_ICONS[p.name] ?? "🤖"} {getProviderLabel(p.name)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">{t("settings.imgGenProviderHint")}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("settings.imgGenModel")}</Label>
+                  <Input value={imgGenModel} onChange={(e) => setImgGenModel(e.target.value)} placeholder={IMG_GEN_DEFAULT_MODELS[imgGenProvider] ?? ""} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("settings.imgGenAspectRatio")}</Label>
+                  <Select value={imgGenAspectRatio} onValueChange={setImgGenAspectRatio}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["1:1", "4:3", "3:2", "16:9", "9:16", "2:3"].map(r => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("settings.imgGenImageSize")}</Label>
+                  <Select value={imgGenImageSize} onValueChange={setImgGenImageSize}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["1K", "2K", "4K"].map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("settings.imgGenMaxPerTurn")}</Label>
+                  <Input type="number" min="1" max="10" value={imgGenMaxPerTurn} onChange={(e) => setImgGenMaxPerTurn(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t("settings.imgGenSaveDir")}</Label>
+                  <Input value={imgGenSaveDir} onChange={(e) => setImgGenSaveDir(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end sm:justify-start">
+                <Button onClick={handleSaveImageGen} disabled={updateAgent.isPending}>{t("settings.save")}</Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

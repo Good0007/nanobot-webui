@@ -96,6 +96,14 @@ class AgentSettingsResponse(BaseModel):
     tool_hint_max_length: int = 40
     context_block_limit: int | None = None
     fallback_models: list[str] = Field(default_factory=list)
+    # v0.2.0+ Image Generation tool config
+    img_gen_enabled: bool = False
+    img_gen_provider: str = "openrouter"
+    img_gen_model: str = "openai/gpt-5.4-image-2"
+    img_gen_default_aspect_ratio: str = "1:1"
+    img_gen_default_image_size: str = "1K"
+    img_gen_max_images_per_turn: int = 4
+    img_gen_save_dir: str = "generated"
 
 
 class AgentSettingsRequest(BaseModel):
@@ -144,6 +152,14 @@ class AgentSettingsRequest(BaseModel):
     tool_hint_max_length: int | None = None
     context_block_limit: int | None = None
     fallback_models: list[str] | None = None
+    # v0.2.0+ Image Generation tool config
+    img_gen_enabled: bool | None = None
+    img_gen_provider: str | None = None
+    img_gen_model: str | None = None
+    img_gen_default_aspect_ratio: str | None = None
+    img_gen_default_image_size: str | None = None
+    img_gen_max_images_per_turn: int | None = None
+    img_gen_save_dir: str | None = None
 
 
 class HeartbeatConfigModel(BaseModel):

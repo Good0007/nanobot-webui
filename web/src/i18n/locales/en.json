@@ -431,7 +431,17 @@
     "unlimited": "Unlimited",
     "fallbackModels": "Fallback Models (one per line)",
     "fallbackModelsPlaceholder": "Models to try in order when the primary fails",
-    "fallbackModelsEmpty": "Configure API keys and model lists in the Providers tab first"
+    "fallbackModelsEmpty": "Configure API keys and model lists in the Providers tab first",
+    "imageGeneration": "Image Generation",
+    "imageGenerationDesc": "Allow agent to generate images via the image generation tool",
+    "imgGenProvider": "Provider",
+    "imgGenModel": "Model",
+    "imgGenAspectRatio": "Default Aspect Ratio",
+    "imgGenImageSize": "Default Image Size",
+    "imgGenMaxPerTurn": "Max Images Per Turn",
+    "imgGenSaveDir": "Save Directory",
+    "enable": "Enable",
+    "imgGenProviderHint": "Only image-generation-capable providers are shown. API base URL and key are inherited from the Providers tab."
   },
   "s3": {
     "title": "S3 Object Storage",

@@ -431,7 +431,17 @@
     "unlimited": "不限制",
     "fallbackModels": "回退模型列表 (每行一个)",
     "fallbackModelsPlaceholder": "主模型失败时按顺序尝试的模型",
-    "fallbackModelsEmpty": "请先在「模型提供商」标签中配置 API Key 和模型列表"
+    "fallbackModelsEmpty": "请先在「模型提供商」标签中配置 API Key 和模型列表",
+    "imageGeneration": "图片生成",
+    "imageGenerationDesc": "启用后 agent 可调用图片生成工具创建图像",
+    "imgGenProvider": "Provider",
+    "imgGenModel": "模型",
+    "imgGenAspectRatio": "默认宽高比",
+    "imgGenImageSize": "默认尺寸",
+    "imgGenMaxPerTurn": "每轮最大张数",
+    "imgGenSaveDir": "保存目录",
+    "enable": "启用",
+    "imgGenProviderHint": "仅显示支持图片生成的 Provider；API 地址和密钥复用「模型提供商」中的配置"
   },
   "s3": {
     "title": "S3 对象存储",

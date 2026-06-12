@@ -13,6 +13,8 @@ import {
   FileText,
   FileVideo,
   RefreshCw,
+  X,
+  ZoomIn,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import api from "../../lib/api";
@@ -101,6 +103,7 @@ export function ArtifactPreview({ filePath }: ArtifactPreviewProps) {
   const [textContent, setTextContent] = useState<string | null>(null);
   // Object URL for image / video
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const blobUrlRef = useRef<string | null>(null);
 
   const category = getFileCategory(filePath);
@@ -270,11 +273,48 @@ export function ArtifactPreview({ filePath }: ArtifactPreviewProps) {
 
           {!loading && !error && category === "image" && blobUrl !== null && (
             <div className="flex justify-center p-3">
+              <div className="relative group cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
+                <img
+                  src={blobUrl}
+                  alt={fileName}
+                  className="max-w-full max-h-[480px] rounded object-contain"
+                />
+                <div className="absolute inset-0 flex items-center justify-center rounded bg-black/0 group-hover:bg-black/10 transition-colors">
+                  <ZoomIn className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Lightbox */}
+          {lightboxOpen && blobUrl && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <button
+                onClick={() => setLightboxOpen(false)}
+                className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDownload(e as unknown as React.MouseEvent); }}
+                className="absolute top-4 right-20 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                aria-label="Download"
+              >
+                <Download className="h-5 w-5" />
+              </button>
               <img
                 src={blobUrl}
                 alt={fileName}
-                className="max-w-full max-h-[480px] rounded object-contain"
+                className="max-w-full max-h-[90vh] rounded-lg object-contain"
+                onClick={(e) => e.stopPropagation()}
               />
+              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/60 font-mono bg-black/40 px-3 py-1 rounded-full">
+                {fileName}
+              </p>
             </div>
           )}
 
