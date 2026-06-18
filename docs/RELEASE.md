@@ -1,5 +1,24 @@
 # Release Notes
 
+## v0.3.0 — 2026-06-18
+
+### Upgrade to nanobot-ai 0.2.1
+
+- Bumped core dependency from `nanobot-ai==0.1.5.post2` to `==0.2.1`
+- Rewrote provider, subagent, MCP, and config patches to align with the new `0.2.1` API (removed legacy compat code, adapted to new AgentLoop/SubAgent interfaces)
+
+### Image Generation Configuration
+
+- Added image generation settings in the **Agent** tab of the Settings page (model, size, quality, style, etc.)
+- Backend config models and PATCH routes extended with image generation fields
+- ArtifactPreview now renders generated images as inline preview cards in the chat window
+
+### Bug Fix
+
+- Fixed `TypeError` crash in `_get_history_patched` when `nanobot` core passes the new `max_tokens` argument — the patch now acts as a transparent `*args, **kwargs` proxy (#47)
+
+---
+
 ## v0.2.9 — 2026-04-25
 
 ### Dashboard — Version & Update Panel
