@@ -106,6 +106,7 @@ export function SetupGuideDialog() {
     "openai",
     "anthropic", 
     "openrouter",
+    "requesty",
     "deepseek",
     "groq",
     "zhipu",

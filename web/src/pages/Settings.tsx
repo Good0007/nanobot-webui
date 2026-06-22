@@ -36,7 +36,7 @@ import {
 // ── Providers tab ─────────────────────────────────────────────────────────────
 
 const PROVIDER_ICONS: Record<string, string> = {
-  anthropic: "🟠", openai: "🟢", openrouter: "🔵", deepseek: "🐋",
+  anthropic: "🟠", openai: "🟢", openrouter: "🔵", requesty: "🧭", deepseek: "🐋",
   volcengine: "🌋", volcengine_coding_plan: "🌋", byteplus: "🟣", byteplus_coding_plan: "🟣",
   groq: "⚡", zhipu: "🧠", dashscope: "☁️",
   vllm: "🖥️", ollama: "🦙", gemini: "💎", moonshot: "🌙", minimax: "🔮", minimax_anthropic: "🔮",
